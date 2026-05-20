@@ -111,21 +111,21 @@ python -c "from docxtpl import DocxTemplate; print('OK')"
 新建Word文档，输入以下内容：
 
 ```
-合同编号：{{ g.contract_no }}
-签订日期：{{ g.sign_date }}
+合同编号：{{ date.合同编号 }}
+签订日期：{{ date.签订日期 }}
 
-甲方：{{ g.party_a }}
-乙方：{{ g.party_b }}
+甲方：{{ date.甲方 }}
+乙方：{{ date.乙方 }}
 
-{%p if g.has_attachment %}
-附件：{{ g.attachment_list }}
+{%p if date.有附件 %}
+附件：{{ date.附件列表 }}
 {%p endif %}
 
-{%tr for item in data.items %}
-{{ item.name }}  {{ item.quantity }}件  单价¥{{ item.price }}  合计¥{{ item.amount }}
+{%tr for item in form.商品列表 %}
+{{ item.名称 }}  {{ item.数量 }}件  单价¥{{ item.单价 }}  合计¥{{ item.金额 }}
 {%tr endfor %}
 
-金额合计：¥{{ data.total_amount }}
+金额合计：¥{{ form.合计金额 }}
 
 甲方签字：___________    乙方签字：___________
 ```
@@ -134,20 +134,20 @@ python -c "from docxtpl import DocxTemplate; print('OK')"
 
 ### 步骤2：创建Excel数据
 
-新建Excel文件，Sheet名称随意，包含以下内容：
+新建Excel文件，Sheet名称 `date.全局`，包含：
 
 | 字段编码 | 值 |
 |----------|-----|
-| g.contract_no | HT-2025-001 |
-| g.sign_date | 2025年1月15日 |
-| g.party_a | 北京科技有限公司 |
-| g.party_b | 上海贸易有限公司 |
-| g.has_attachment | TRUE |
-| g.attachment_list | 附件1：产品规格书 |
+| date.合同编号 | HT-2025-001 |
+| date.签订日期 | 2025年1月15日 |
+| date.甲方 | 北京科技有限公司 |
+| date.乙方 | 上海贸易有限公司 |
+| date.有附件 | TRUE |
+| date.附件列表 | 附件1：产品规格书 |
 
-第二个Sheet命名为 `data.items`（用于循环数据），包含：
+第二个Sheet命名为 `form.商品列表`（用于循环数据），包含：
 
-| name | quantity | price | amount |
+| 名称 | 数量 | 单价 | 金额 |
 |------|----------|-------|--------|
 | 产品A | 100 | 50.00 | 5000.00 |
 | 产品B | 50 | 80.00 | 4000.00 |
@@ -213,7 +213,7 @@ python -m src.renderer --batch data/batch/ templates/template.docx output/
 | 变量显示为空 | 检查Excel字段编码是否匹配 |
 | 金额格式错误 | 使用 `{{ value \| money }}` 过滤器 |
 | 条件不生效 | 布尔值用 `TRUE`/`FALSE`（大写）|
-| 表格行没循环 | 检查Sheet命名是否为 `data.items` |
+| 表格行没循环 | 检查Sheet命名是否为 `form.名称` |
 
 ---
 

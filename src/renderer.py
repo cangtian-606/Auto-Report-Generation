@@ -192,63 +192,33 @@ class DataMapper:
         """
         构建模板渲染上下文
         
-        根据Sheet名称和数据类型，自动映射到对应的域：
-        - 00_全局信息、99_全局等 → context['g']
-        - 19_文字说明、notes等 → context['notes']
-        - 20_条件标志、flags等 → context['flags']
-        - 其他表格型Sheet → context['fs'][sheet_name]
+        支持两种 Sheet 类型：
+        - date.xxx: 键值对 → context['date']
+        - form.xxx: 表格数据 → context['form']
         
         Returns:
             docxtpl模板渲染上下文
         """
         context: Dict[str, Any] = {
-            'g': {},
-            'info': {},
-            'notes': {},
-            'flags': {},
-            'data': {},
-            'fs': {},
+            'date': {},
+            'form': {},
         }
         
         for sheet_name, data in self.raw_data.items():
-            sheet_lower = sheet_name.lower()
-            
-            # 键值对数据：分配到对应域
+            # 键值对：date.xxx Sheet → date.xxx
             if isinstance(data, dict):
                 for key, value in data.items():
-                    # 根据key前缀分配
-                    if key.startswith('g.'):
-                        # g.company_name → g.company_name
-                        context['g'][key[2:]] = self._convert_value(value)
-                    elif key.startswith('info.'):
-                        # info.address → info.address
-                        context['info'][key[5:]] = self._convert_value(value)
-                    elif key.startswith('notes.'):
-                        # notes.remark → notes.remark
-                        context['notes'][key[6:]] = self._convert_value(value)
-                    elif key.startswith('flags.'):
-                        # flags.show → flags.show
-                        context['flags'][key[6:]] = self._convert_bool(value)
-                    elif key.startswith('data.'):
-                        # data.xxx → data.xxx
-                        context['data'][key[5:]] = self._convert_value(value)
+                    if key.startswith('date.'):
+                        context['date'][key[5:]] = self._convert_value(value)
                     else:
-                        # 没有前缀：根据Sheet类型分配
-                        if '全局' in sheet_lower or 'global' in sheet_lower:
-                            context['g'][key] = self._convert_value(value)
-                        elif '说明' in sheet_lower or 'note' in sheet_lower:
-                            context['notes'][key] = self._convert_value(value)
-                        elif '标志' in sheet_lower or 'flag' in sheet_lower:
-                            context['flags'][key] = self._convert_bool(value)
-                        else:
-                            context['data'][key] = self._convert_value(value)
+                        context['date'][key] = self._convert_value(value)
             
-            # 表格数据：按Sheet名称前缀分配
+            # 表格数据：form.xxx Sheet → form.xxx
             elif isinstance(data, pd.DataFrame):
-                if sheet_name.startswith('data.'):
-                    context['data'][sheet_name[5:]] = data.to_dict('records')
+                if sheet_name.startswith('form.'):
+                    context['form'][sheet_name[5:]] = data.to_dict('records')
                 else:
-                    context['fs'][sheet_name] = data.to_dict('records')
+                    context['form'][sheet_name] = data.to_dict('records')
         
         return context
     
@@ -480,9 +450,8 @@ def render_single(data_path: str, template_path: str, output_path: str,
     mapper = DataMapper(raw_data)
     context = mapper.build_context()
     
-    logger.info(f"上下文统计: g={len(context['g'])}, info={len(context['info'])}, "
-                f"notes={len(context['notes'])}, flags={len(context['flags'])}, "
-                f"data={len(context['data'])}, fs={len(context['fs'])} Sheet")
+    logger.info(f"上下文统计: date={len(context['date'])} 个键值对, "
+                f"form={len(context['form'])} 个表格 Sheet")
     
     # 3. 检查未定义变量
     if check_vars:
