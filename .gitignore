@@ -19,3 +19,7 @@ output/*.docx
 # OS
 .DS_Store
 Thumbs.db
+
+# Office temp files (lock files created when Excel/Word files are open)
+~$.*
+~$*
