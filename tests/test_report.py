@@ -23,22 +23,25 @@ def setup_template():
 
     # === 表格0: 基本信息 ===
     basic_fields = [
-        "date.全局信息.公司名",
-        "date.基本情况.信用代码",
-        "date.基本情况.注册地址",
-        "date.基本情况.法定代表人",
-        "date.基本情况.公司类型",
-        "date.基本情况.注册资本",
-        "date.基本情况.经营范围",
-        "date.基本情况.成立日期",
-        "date.基本情况.经营期限",
+        ("date.全局信息.公司名", None),
+        ("date.基本情况.信用代码", None),
+        ("date.基本情况.注册地址", None),
+        ("date.基本情况.法定代表人", None),
+        ("date.基本情况.公司类型", None),
+        ("date.基本情况.注册资本", "num"),
+        ("date.基本情况.经营范围", None),
+        ("date.基本情况.成立日期", None),
+        ("date.基本情况.经营期限", None),
     ]
     table0 = doc.tables[0]
-    for ri, field in enumerate(basic_fields):
+    for ri, (field, flt) in enumerate(basic_fields):
         cell = table0.rows[ri].cells[1]
         para = cell.paragraphs[0]
         para.clear()
-        para.add_run("{{ " + field + " }}")
+        if flt:
+            para.add_run("{{ " + field + " | " + flt + " }}")
+        else:
+            para.add_run("{{ " + field + " }}")
 
     # === 表格1: 股东出资（动态循环）===
     table1 = doc.tables[1]
@@ -64,8 +67,15 @@ def setup_template():
     endfor_row1 = table1.add_row()
     endfor_row1.cells[0].paragraphs[0].add_run("{%tr endfor %}")
 
-    # === 表格2: 员工信息（动态循环）===
+    # === 表格2: 员工信息（动态循环，有条件）===
     table2 = doc.tables[2]
+    table3 = doc.tables[3]
+    if_para = doc.add_paragraph("{%p if date.基本情况.有职工信息 %}")
+    end_para = doc.add_paragraph("{%p endif %}")
+    body = doc.element.body
+    body.insert(list(body).index(table2._element), if_para._p)
+    body.insert(list(body).index(table3._element), end_para._p)
+
     while len(table2.rows) > 1:
         tbl_elem = table2.rows[1]._tr.getparent()
         tbl_elem.remove(table2.rows[1]._tr)
@@ -126,6 +136,7 @@ def setup_data():
         ["经营范围", "软件开发、技术咨询、技术服务"],
         ["成立日期", "2018-06-15"],
         ["经营期限", "2018-06-15 至 长期"],
+        ["有职工信息", "FALSE"],
     ]
     for row_data in basic_data:
         ws_basic.append(row_data)
@@ -223,6 +234,7 @@ def verify_output():
         "合计在投资明细中": "合计" in all_text,
         "投资金额500格式": "500.00" in all_text or "500,00" in all_text,
         "持股比例50%格式": "50.00%" in all_text,
+        "有职工信息FALSE时隐藏职工表格": "张伟-执行董事" not in all_text,
         "无残留Jinja2标签": "{{" not in all_text and "{%" not in all_text,
     }
 

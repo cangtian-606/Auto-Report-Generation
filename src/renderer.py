@@ -244,6 +244,12 @@ class DataMapper:
         """转换值类型"""
         if value is None:
             return ''
+        if isinstance(value, str):
+            upper = value.strip().upper()
+            if upper == 'TRUE':
+                return True
+            if upper == 'FALSE':
+                return False
         if isinstance(value, (int, float)):
             if value == 0:
                 return ''
