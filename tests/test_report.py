@@ -53,13 +53,13 @@ def setup_template():
     for_row1.cells[2].paragraphs[0].clear()
     for_row1.cells[3].paragraphs[0].clear()
     for_row1.cells[4].paragraphs[0].clear()
-    # 添加数据行
+    # 添加数据行（认缴/实缴金额用money过滤器，比例用percent过滤器）
     data_row1 = table1.add_row()
     data_row1.cells[0].paragraphs[0].add_run("{{ i.股东 }}")
-    data_row1.cells[1].paragraphs[0].add_run("{{ i.认缴金额 }}")
-    data_row1.cells[2].paragraphs[0].add_run("{{ i.认缴比例 }}")
-    data_row1.cells[3].paragraphs[0].add_run("{{ i.实缴金额 }}")
-    data_row1.cells[4].paragraphs[0].add_run("{{ i.实缴比例 }}")
+    data_row1.cells[1].paragraphs[0].add_run("{{ i.认缴金额 | money }}")
+    data_row1.cells[2].paragraphs[0].add_run("{{ i.认缴比例 | percent }}")
+    data_row1.cells[3].paragraphs[0].add_run("{{ i.实缴金额 | money }}")
+    data_row1.cells[4].paragraphs[0].add_run("{{ i.实缴比例 | percent }}")
     # 添加 endfor 行
     endfor_row1 = table1.add_row()
     endfor_row1.cells[0].paragraphs[0].add_run("{%tr endfor %}")
@@ -86,8 +86,8 @@ def setup_template():
     for_row3.cells[0].paragraphs[0].add_run("{%tr for i in form.投资明细 %}")
     data_row3 = table3.add_row()
     data_row3.cells[0].paragraphs[0].add_run("{{ i.项目 }}")
-    data_row3.cells[1].paragraphs[0].add_run("{{ i.金额 }}")
-    data_row3.cells[2].paragraphs[0].add_run("{{ i.持股比例 }}")
+    data_row3.cells[1].paragraphs[0].add_run("{{ i.金额 | money }}")
+    data_row3.cells[2].paragraphs[0].add_run("{{ i.持股比例 | percent }}")
     endfor_row3 = table3.add_row()
     endfor_row3.cells[0].paragraphs[0].add_run("{%tr endfor %}")
 
@@ -211,13 +211,18 @@ def verify_output():
         "公司名称已替换": "深圳市创新科技有限公司" in all_text,
         "信用代码已替换": "91440300MA5XXXXX00" in all_text,
         "法定代表人已替换": "张伟" in all_text,
-        "注册资本已替换": "1000" in all_text,
+        "注册资本已替换": "1,000" in all_text,
         "成立日期已替换": "2018-06-15" in all_text,
         "股东李芳在表格中": "李芳" in all_text,
         "认缴金额已替换": "250" in all_text,
+        "金额格式_认缴250": "250.00" in all_text or "250,00" in all_text,
+        "金额格式_实缴600": "600.00" in all_text or "600,00" in all_text,
+        "百分比格式_25%": "25.00%" in all_text,
+        "百分比格式_60%": "60.00%" in all_text,
         "项目A在投资明细中": "项目A" in all_text,
         "合计在投资明细中": "合计" in all_text,
-        "投资金额1000在表格中": "1000" in all_text,
+        "投资金额500格式": "500.00" in all_text or "500,00" in all_text,
+        "持股比例50%格式": "50.00%" in all_text,
         "无残留Jinja2标签": "{{" not in all_text and "{%" not in all_text,
     }
 

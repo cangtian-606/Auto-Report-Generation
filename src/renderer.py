@@ -281,15 +281,16 @@ class TemplateRenderer:
         return {
             'money': self._filter_money,
             'percent': self._filter_percent,
+            'num': self._filter_num,
             'default_dash': self._filter_default_dash,
             'default': self._filter_default,
             'int': self._filter_int,
             'str': self._filter_str,
         }
-    
+
     @staticmethod
     def _filter_money(value: Any) -> str:
-        """金额千分位格式化"""
+        """金额千分位格式化（保留2位小数）"""
         if value is None or value == '':
             return ''
         try:
@@ -299,14 +300,32 @@ class TemplateRenderer:
             return f"{num:,.2f}"
         except (ValueError, TypeError):
             return str(value)
-    
+
     @staticmethod
     def _filter_percent(value: Any) -> str:
-        """百分比格式化"""
+        """小数转百分比（0.5 → 50.00%）"""
         if value is None or value == '':
             return ''
         try:
-            return f"{float(value):.2f}%"
+            num = float(value)
+            if num == 0:
+                return ''
+            return f"{num * 100:.2f}%"
+        except (ValueError, TypeError):
+            return str(value)
+
+    @staticmethod
+    def _filter_num(value: Any) -> str:
+        """数字原值显示（用于出资额、注册资本等数值）"""
+        if value is None or value == '':
+            return ''
+        try:
+            num = float(value)
+            if num == 0:
+                return ''
+            if num == int(num):
+                return f"{int(num):,}"
+            return f"{num:,.2f}"
         except (ValueError, TypeError):
             return str(value)
     
