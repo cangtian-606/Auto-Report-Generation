@@ -207,14 +207,19 @@ class DataMapper:
         }
 
         for sheet_name, data in self.raw_data.items():
-            # 键值对：date.xxx Sheet → date.xxx
+            # 键值对：date.xxx Sheet
             if isinstance(data, dict):
-                for key, value in data.items():
-                    if key.startswith('date.'):
-                        key_suffix = key[5:]
-                        self._set_nested(context['date'], key_suffix, self._convert_value(value))
-                    else:
-                        context['date'][key] = self._convert_value(value)
+                # Sheet 名前缀用于构造完整字段路径
+                # 例如：Sheet="date.全局信息", 字段编码="公司名" → "date.全局信息.公司名"
+                if sheet_name.startswith('date.'):
+                    sheet_prefix = sheet_name[5:]
+                    for key, value in data.items():
+                        key = key.strip()
+                        full_key = f"{sheet_prefix}.{key}"
+                        self._set_nested(context['date'], full_key, self._convert_value(value))
+                else:
+                    for key, value in data.items():
+                        context['date'][key.strip()] = self._convert_value(value)
 
             # 表格数据：form.xxx Sheet → form.xxx
             elif isinstance(data, pd.DataFrame):

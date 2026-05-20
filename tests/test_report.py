@@ -21,7 +21,7 @@ def setup_template():
 
     doc = Document(str(TEMPLATE_SRC))
 
-    # === 基本信息表 (Table 0): 9 rows x 2 cols ===
+    # === 表格0: 基本信息 ===
     basic_fields = [
         "date.全局信息.公司名",
         "date.基本情况.信用代码",
@@ -40,72 +40,56 @@ def setup_template():
         para.clear()
         para.add_run("{{ " + field + " }}")
 
-    # === 股东出资表 (Table 1): 动态循环 ===
-    # Row0: header, Row1: pure {%tr for %}, Row2: data cells, Row3: pure {%tr endfor %}
+    # === 表格1: 股东出资（动态循环）===
     table1 = doc.tables[1]
-    header_fields = [
-        "股东",
-        "认缴金额",
-        "认缴比例",
-        "实缴金额",
-        "实缴比例",
-    ]
-    # Row 1: clear all cells, put only {%tr for %} in cell 0
-    for ci in range(len(table1.rows[1].cells)):
-        table1.rows[1].cells[ci].paragraphs[0].clear()
-    table1.rows[1].cells[0].paragraphs[0].add_run("{%tr for sh in form.股东出资 %}")
-    # Row 2: data row with {{ sh.xxx }}
-    data_row = table1.add_row()
-    for ci, field in enumerate(header_fields):
-        data_row.cells[ci].paragraphs[0].clear()
-        data_row.cells[ci].paragraphs[0].add_run("{{ sh." + field + " }}")
-    # Row 3: endfor
-    endfor_row = table1.add_row()
-    endfor_row.cells[0].paragraphs[0].clear()
-    endfor_row.cells[0].paragraphs[0].add_run("{%tr endfor %}")
+    # 清空空行，只保留表头行
+    while len(table1.rows) > 1:
+        tbl_elem = table1.rows[-1]._tr.getparent()
+        tbl_elem.remove(table1.rows[-1]._tr)
+    # 添加 for 行
+    for_row1 = table1.add_row()
+    for_row1.cells[0].paragraphs[0].add_run("{%tr for i in form.股东出资 %}")
+    for_row1.cells[1].paragraphs[0].clear()
+    for_row1.cells[2].paragraphs[0].clear()
+    for_row1.cells[3].paragraphs[0].clear()
+    for_row1.cells[4].paragraphs[0].clear()
+    # 添加数据行
+    data_row1 = table1.add_row()
+    data_row1.cells[0].paragraphs[0].add_run("{{ i.股东 }}")
+    data_row1.cells[1].paragraphs[0].add_run("{{ i.认缴金额 }}")
+    data_row1.cells[2].paragraphs[0].add_run("{{ i.认缴比例 }}")
+    data_row1.cells[3].paragraphs[0].add_run("{{ i.实缴金额 }}")
+    data_row1.cells[4].paragraphs[0].add_run("{{ i.实缴比例 }}")
+    # 添加 endfor 行
+    endfor_row1 = table1.add_row()
+    endfor_row1.cells[0].paragraphs[0].add_run("{%tr endfor %}")
 
-    # === 股东信息表 (Table 2): 动态循环 ===
+    # === 表格2: 员工信息（动态循环）===
     table2 = doc.tables[2]
-    table2.rows[0].cells[0].paragraphs[0].clear()
-    table2.rows[0].cells[0].paragraphs[0].add_run("序号")
-    table2.rows[0].cells[1].paragraphs[0].clear()
-    table2.rows[0].cells[1].paragraphs[0].add_run("职务")
     while len(table2.rows) > 1:
         tbl_elem = table2.rows[1]._tr.getparent()
         tbl_elem.remove(table2.rows[1]._tr)
-    for_row = table2.add_row()
-    for_row.cells[0].paragraphs[0].add_run("{%tr for si in form.股东信息 %}")
-    si_data_row = table2.add_row()
-    si_data_row.cells[0].paragraphs[0].add_run("{{ si.序号 }}")
-    si_data_row.cells[1].paragraphs[0].add_run("{{ si.职务 }}")
-    si_endfor = table2.add_row()
-    si_endfor.cells[0].paragraphs[0].add_run("{%tr endfor %}")
+    for_row2 = table2.add_row()
+    for_row2.cells[0].paragraphs[0].add_run("{%tr for i in form.员工信息 %}")
+    data_row2 = table2.add_row()
+    data_row2.cells[0].paragraphs[0].add_run("{{ i.序号 }}")
+    data_row2.cells[1].paragraphs[0].add_run("{{ i.职务 }}")
+    endfor_row2 = table2.add_row()
+    endfor_row2.cells[0].paragraphs[0].add_run("{%tr endfor %}")
 
-    # === 投资明细表 (Table 3): 动态循环 ===
-    title_para = doc.add_paragraph("投资明细表")
-    table3 = doc.add_table(rows=2, cols=3)
-    header_row = table3.rows[0]
-    header_row.cells[0].paragraphs[0].clear()
-    header_row.cells[0].paragraphs[0].add_run("项目")
-    header_row.cells[1].paragraphs[0].clear()
-    header_row.cells[1].paragraphs[0].add_run("金额")
-    header_row.cells[2].paragraphs[0].clear()
-    header_row.cells[2].paragraphs[0].add_run("比例")
-    # 删除第2行(空行),重建 for/data/endfor 结构
-    tbl_elem = table3.rows[1]._tr.getparent()
-    tbl_elem.remove(table3.rows[1]._tr)
+    # === 表格3: 对外投资明细表（动态循环）===
+    table3 = doc.tables[3]
+    while len(table3.rows) > 1:
+        tbl_elem = table3.rows[1]._tr.getparent()
+        tbl_elem.remove(table3.rows[1]._tr)
     for_row3 = table3.add_row()
-    for_row3.cells[0].paragraphs[0].add_run("{%tr for inv in form.投资明细 %}")
-    for_row3.cells[1].paragraphs[0].clear()
-    for_row3.cells[2].paragraphs[0].clear()
+    for_row3.cells[0].paragraphs[0].add_run("{%tr for i in form.投资明细 %}")
     data_row3 = table3.add_row()
-    data_row3.cells[0].paragraphs[0].add_run("{{ inv.项目 }}")
-    data_row3.cells[1].paragraphs[0].add_run("{{ inv.金额 }}")
-    data_row3.cells[2].paragraphs[0].add_run("{{ inv.比例 }}")
+    data_row3.cells[0].paragraphs[0].add_run("{{ i.项目 }}")
+    data_row3.cells[1].paragraphs[0].add_run("{{ i.金额 }}")
+    data_row3.cells[2].paragraphs[0].add_run("{{ i.持股比例 }}")
     endfor_row3 = table3.add_row()
     endfor_row3.cells[0].paragraphs[0].add_run("{%tr endfor %}")
-    endfor_row3.cells[1].paragraphs[0].clear()
-    endfor_row3.cells[2].paragraphs[0].clear()
 
     doc.save(str(TEMPLATE_OUT))
     return True
@@ -123,7 +107,7 @@ def setup_data():
     ws_global.title = "date.全局信息"
     ws_global.append(["字段编码", "值"])
     global_data = [
-        ["date.全局信息.公司名", "深圳市创新科技有限公司"],
+        ["公司名", "深圳市创新科技有限公司"],
     ]
     for row_data in global_data:
         ws_global.append(row_data)
@@ -134,14 +118,14 @@ def setup_data():
     ws_basic = wb.create_sheet("date.基本情况")
     ws_basic.append(["字段编码", "值"])
     basic_data = [
-        ["date.基本情况.信用代码", "91440300MA5XXXXX00"],
-        ["date.基本情况.注册地址", "深圳市南山区粤海街道科技园南路88号"],
-        ["date.基本情况.法定代表人", "张伟"],
-        ["date.基本情况.公司类型", "有限责任公司"],
-        ["date.基本情况.注册资本", 1000.00],
-        ["date.基本情况.经营范围", "软件开发、技术咨询、技术服务"],
-        ["date.基本情况.成立日期", "2018-06-15"],
-        ["date.基本情况.经营期限", "2018-06-15 至 长期"],
+        ["信用代码", "91440300MA5XXXXX00"],
+        ["注册地址", "深圳市南山区粤海街道科技园南路88号"],
+        ["法定代表人", "张伟"],
+        ["公司类型", "有限责任公司"],
+        ["注册资本", 1000.00],
+        ["经营范围", "软件开发、技术咨询、技术服务"],
+        ["成立日期", "2018-06-15"],
+        ["经营期限", "2018-06-15 至 长期"],
     ]
     for row_data in basic_data:
         ws_basic.append(row_data)
@@ -168,8 +152,8 @@ def setup_data():
     for col in ["B", "C", "D", "E"]:
         ws_sh.column_dimensions[col].width = 18
 
-    # Sheet 4: form.股东信息
-    ws_info = wb.create_sheet("form.股东信息")
+    # Sheet 4: form.员工信息
+    ws_info = wb.create_sheet("form.员工信息")
     ws_info.append(["序号", "职务"])
     info_data = [
         [1, "张伟-执行董事"],
@@ -181,9 +165,9 @@ def setup_data():
     ws_info.column_dimensions["A"].width = 10
     ws_info.column_dimensions["B"].width = 25
 
-    # Sheet 5: form.投资明细 (项目/金额/比例/合计)
+    # Sheet 5: form.投资明细
     ws_invest = wb.create_sheet("form.投资明细")
-    ws_invest.append(["项目", "金额", "比例"])
+    ws_invest.append(["项目", "金额", "持股比例"])
     invest_data = [
         ["项目A", 500.00, 0.50],
         ["项目B", 300.00, 0.30],
