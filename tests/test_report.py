@@ -23,15 +23,15 @@ def setup_template():
 
     # === 基本信息表 (Table 0): 9 rows x 2 cols ===
     basic_fields = [
-        "date.公司名",
-        "date.信用代码",
-        "date.注册地址",
-        "date.法定代表人",
-        "date.公司类型",
-        "date.注册资本",
-        "date.经营范围",
-        "date.成立日期",
-        "date.经营期限",
+        "date.全局信息.公司名",
+        "date.基本情况.信用代码",
+        "date.基本情况.注册地址",
+        "date.基本情况.法定代表人",
+        "date.基本情况.公司类型",
+        "date.基本情况.注册资本",
+        "date.基本情况.经营范围",
+        "date.基本情况.成立日期",
+        "date.基本情况.经营期限",
     ]
     table0 = doc.tables[0]
     for ri, field in enumerate(basic_fields):
@@ -65,27 +65,47 @@ def setup_template():
     endfor_row.cells[0].paragraphs[0].add_run("{%tr endfor %}")
 
     # === 股东信息表 (Table 2): 动态循环 ===
-    # Row0: header, then for row, data row, endfor row
     table2 = doc.tables[2]
-    # Set header
     table2.rows[0].cells[0].paragraphs[0].clear()
-    table2.rows[0].cells[0].paragraphs[0].add_run("\u5e8f\u53f7")
+    table2.rows[0].cells[0].paragraphs[0].add_run("序号")
     table2.rows[0].cells[1].paragraphs[0].clear()
-    table2.rows[0].cells[1].paragraphs[0].add_run("\u80a1\u4e1c\u540d\u79f0")
-    # Delete all rows except header
+    table2.rows[0].cells[1].paragraphs[0].add_run("职务")
     while len(table2.rows) > 1:
         tbl_elem = table2.rows[1]._tr.getparent()
         tbl_elem.remove(table2.rows[1]._tr)
-    # Row 1: pure {%tr for %}
     for_row = table2.add_row()
     for_row.cells[0].paragraphs[0].add_run("{%tr for si in form.股东信息 %}")
-    # Row 2: data row
     si_data_row = table2.add_row()
     si_data_row.cells[0].paragraphs[0].add_run("{{ si.序号 }}")
-    si_data_row.cells[1].paragraphs[0].add_run("{{ si.详情 }}")
-    # Row 3: endfor
+    si_data_row.cells[1].paragraphs[0].add_run("{{ si.职务 }}")
     si_endfor = table2.add_row()
     si_endfor.cells[0].paragraphs[0].add_run("{%tr endfor %}")
+
+    # === 投资明细表 (Table 3): 动态循环 ===
+    title_para = doc.add_paragraph("投资明细表")
+    table3 = doc.add_table(rows=2, cols=3)
+    header_row = table3.rows[0]
+    header_row.cells[0].paragraphs[0].clear()
+    header_row.cells[0].paragraphs[0].add_run("项目")
+    header_row.cells[1].paragraphs[0].clear()
+    header_row.cells[1].paragraphs[0].add_run("金额")
+    header_row.cells[2].paragraphs[0].clear()
+    header_row.cells[2].paragraphs[0].add_run("比例")
+    # 删除第2行(空行),重建 for/data/endfor 结构
+    tbl_elem = table3.rows[1]._tr.getparent()
+    tbl_elem.remove(table3.rows[1]._tr)
+    for_row3 = table3.add_row()
+    for_row3.cells[0].paragraphs[0].add_run("{%tr for inv in form.投资明细 %}")
+    for_row3.cells[1].paragraphs[0].clear()
+    for_row3.cells[2].paragraphs[0].clear()
+    data_row3 = table3.add_row()
+    data_row3.cells[0].paragraphs[0].add_run("{{ inv.项目 }}")
+    data_row3.cells[1].paragraphs[0].add_run("{{ inv.金额 }}")
+    data_row3.cells[2].paragraphs[0].add_run("{{ inv.比例 }}")
+    endfor_row3 = table3.add_row()
+    endfor_row3.cells[0].paragraphs[0].add_run("{%tr endfor %}")
+    endfor_row3.cells[1].paragraphs[0].clear()
+    endfor_row3.cells[2].paragraphs[0].clear()
 
     doc.save(str(TEMPLATE_OUT))
     return True
@@ -99,26 +119,36 @@ def setup_data():
     wb = openpyxl.Workbook()
 
     # Sheet 1: date.全局信息
-    ws_date = wb.active
-    ws_date.title = "date.全局信息"
-    ws_date.append(["字段编码", "值"])
-    date_data = [
-        ["date.公司名", "深圳市创新科技有限公司"],
-        ["date.信用代码", "91440300MA5XXXXX00"],
-        ["date.注册地址", "深圳市南山区粤海街道科技园南路88号"],
-        ["date.法定代表人", "张伟"],
-        ["date.公司类型", "有限责任公司"],
-        ["date.注册资本", 1000.00],
-        ["date.经营范围", "软件开发、技术咨询、技术服务"],
-        ["date.成立日期", "2018-06-15"],
-        ["date.经营期限", "2018-06-15 至 长期"],
+    ws_global = wb.active
+    ws_global.title = "date.全局信息"
+    ws_global.append(["字段编码", "值"])
+    global_data = [
+        ["date.全局信息.公司名", "深圳市创新科技有限公司"],
     ]
-    for row_data in date_data:
-        ws_date.append(row_data)
-    ws_date.column_dimensions["A"].width = 25
-    ws_date.column_dimensions["B"].width = 50
+    for row_data in global_data:
+        ws_global.append(row_data)
+    ws_global.column_dimensions["A"].width = 25
+    ws_global.column_dimensions["B"].width = 50
 
-    # Sheet 2: form.股东出资
+    # Sheet 2: date.基本情况
+    ws_basic = wb.create_sheet("date.基本情况")
+    ws_basic.append(["字段编码", "值"])
+    basic_data = [
+        ["date.基本情况.信用代码", "91440300MA5XXXXX00"],
+        ["date.基本情况.注册地址", "深圳市南山区粤海街道科技园南路88号"],
+        ["date.基本情况.法定代表人", "张伟"],
+        ["date.基本情况.公司类型", "有限责任公司"],
+        ["date.基本情况.注册资本", 1000.00],
+        ["date.基本情况.经营范围", "软件开发、技术咨询、技术服务"],
+        ["date.基本情况.成立日期", "2018-06-15"],
+        ["date.基本情况.经营期限", "2018-06-15 至 长期"],
+    ]
+    for row_data in basic_data:
+        ws_basic.append(row_data)
+    ws_basic.column_dimensions["A"].width = 25
+    ws_basic.column_dimensions["B"].width = 50
+
+    # Sheet 3: form.股东出资
     ws_sh = wb.create_sheet("form.股东出资")
     ws_sh.append([
         "股东",
@@ -138,9 +168,9 @@ def setup_data():
     for col in ["B", "C", "D", "E"]:
         ws_sh.column_dimensions[col].width = 18
 
-    # Sheet 3: form.股东信息
+    # Sheet 4: form.股东信息
     ws_info = wb.create_sheet("form.股东信息")
-    ws_info.append(["序号", "详情"])
+    ws_info.append(["序号", "职务"])
     info_data = [
         [1, "张伟-执行董事"],
         [2, "李芳-监事"],
@@ -150,6 +180,21 @@ def setup_data():
         ws_info.append(row_data)
     ws_info.column_dimensions["A"].width = 10
     ws_info.column_dimensions["B"].width = 25
+
+    # Sheet 5: form.投资明细 (项目/金额/比例/合计)
+    ws_invest = wb.create_sheet("form.投资明细")
+    ws_invest.append(["项目", "金额", "比例"])
+    invest_data = [
+        ["项目A", 500.00, 0.50],
+        ["项目B", 300.00, 0.30],
+        ["项目C", 200.00, 0.20],
+        ["合计", 1000.00, 1.00],
+    ]
+    for row_data in invest_data:
+        ws_invest.append(row_data)
+    ws_invest.column_dimensions["A"].width = 20
+    ws_invest.column_dimensions["B"].width = 18
+    ws_invest.column_dimensions["C"].width = 15
 
     wb.save(str(DATA_FILE))
     return True
@@ -186,6 +231,9 @@ def verify_output():
         "成立日期已替换": "2018-06-15" in all_text,
         "股东李芳在表格中": "李芳" in all_text,
         "认缴金额已替换": "250" in all_text,
+        "项目A在投资明细中": "项目A" in all_text,
+        "合计在投资明细中": "合计" in all_text,
+        "投资金额1000在表格中": "1000" in all_text,
         "无残留Jinja2标签": "{{" not in all_text and "{%" not in all_text,
     }
 

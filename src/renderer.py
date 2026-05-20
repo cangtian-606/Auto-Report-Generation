@@ -191,11 +191,13 @@ class DataMapper:
     def build_context(self) -> Dict[str, Any]:
         """
         构建模板渲染上下文
-        
+
         支持两种 Sheet 类型：
         - date.xxx: 键值对 → context['date']
         - form.xxx: 表格数据 → context['form']
-        
+
+        字段名支持点号嵌套，如 `date.全局信息.公司名` → context['date']['全局信息']['公司名']
+
         Returns:
             docxtpl模板渲染上下文
         """
@@ -203,24 +205,35 @@ class DataMapper:
             'date': {},
             'form': {},
         }
-        
+
         for sheet_name, data in self.raw_data.items():
             # 键值对：date.xxx Sheet → date.xxx
             if isinstance(data, dict):
                 for key, value in data.items():
                     if key.startswith('date.'):
-                        context['date'][key[5:]] = self._convert_value(value)
+                        key_suffix = key[5:]
+                        self._set_nested(context['date'], key_suffix, self._convert_value(value))
                     else:
                         context['date'][key] = self._convert_value(value)
-            
+
             # 表格数据：form.xxx Sheet → form.xxx
             elif isinstance(data, pd.DataFrame):
                 if sheet_name.startswith('form.'):
                     context['form'][sheet_name[5:]] = data.to_dict('records')
                 else:
                     context['form'][sheet_name] = data.to_dict('records')
-        
+
         return context
+
+    def _set_nested(self, d: Dict[str, Any], path: str, value: Any) -> None:
+        """将键值按点号路径设置到嵌套字典中"""
+        parts = path.split('.')
+        current = d
+        for part in parts[:-1]:
+            if part not in current:
+                current[part] = {}
+            current = current[part]
+        current[parts[-1]] = value
     
     def _convert_value(self, value: Any) -> Any:
         """转换值类型"""
