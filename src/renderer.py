@@ -263,11 +263,11 @@ class DataMapper:
         return value
     
     def _convert_bool(self, value: Any) -> bool:
-        """转换布尔值"""
+        """Convert boolean value. Only accepts TRUE/FALSE (case-insensitive)."""
         if isinstance(value, bool):
             return value
         if isinstance(value, str):
-            return value.strip().upper() in ('TRUE', '是', '1', 'YES', 'T')
+            return value.strip().upper() == 'TRUE'
         if isinstance(value, (int, float)):
             return bool(value)
         return False
@@ -572,87 +572,84 @@ def render_batch(data_dir: str, template_path: str, output_dir: str,
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Word模板渲染器 - 将含变量的模板与Excel数据结合生成文档",
+        description="Word Template Renderer - Generate documents from templates and Excel data",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-示例:
-  # 单文件渲染
-  python template_renderer.py --data data.xlsx template.docx output.docx
+Examples:
+  # Single file mode
+  python -m src.renderer --data data.xlsx --template template.docx --output output.docx
 
-  # 批量渲染
-  python template_renderer.py --batch data/ template.docx output/
+  # Batch mode
+  python -m src.renderer --batch data/ --template template.docx --output-dir output/
 
-  # 严格模式（未定义变量时报错）
-  python template_renderer.py --strict --data data.xlsx template.docx output.docx
+  # Strict mode (error on undefined variables)
+  python -m src.renderer --strict --data data.xlsx --template template.docx --output output.docx
 
-Excel数据文件格式:
-  方式1 - 键值对格式:
-    | 字段编码 | 值 |
-    | g.company_name | XX公司 |
+Excel data file format:
+  Key-value format:
+    | field_code | value |
+    | g.company_name | XX Company |
     | g.date | 2025-01-15 |
-    | notes.remark | 这是备注 |
 
-  方式2 - 表格格式（用于循环数据）:
-    | 名称 | 数量 | 金额 |
-    | 产品A | 10 | 1000 |
-    | 产品B | 5 | 500 |
+  Table format (for loops):
+    | name | quantity | amount |
+    | Product A | 10 | 1000 |
+    | Product B | 5 | 500 |
         """,
     )
-    parser.add_argument("template", nargs="?", help="模板文件路径（.docx）")
-    parser.add_argument("--data", "-d", help="Excel数据文件路径")
-    parser.add_argument("--output", "-o", help="输出文件路径（或输出目录用于批量）")
-    parser.add_argument("--batch", "-b", help="数据文件目录（批量模式）")
-    parser.add_argument("--strict", action="store_true", 
-                       help="严格模式：未定义变量时报错")
+    parser.add_argument("--data", "-d", help="Excel data file path")
+    parser.add_argument("--template", "-t", help="Template file path (.docx)")
+    parser.add_argument("--output", "-o", help="Output file path (for single mode)")
+    parser.add_argument("--batch", "-b", help="Data files directory (batch mode)")
+    parser.add_argument("--output-dir", help="Output directory (for batch mode)")
+    parser.add_argument("--strict", action="store_true",
+                       help="Strict mode: error on undefined variables")
     parser.add_argument("--no-check", action="store_true",
-                       help="跳过变量检查")
+                       help="Skip variable check")
     
     args = parser.parse_args()
     
-    # 参数验证
     if args.batch:
-        # 批量模式
         if not args.template:
-            logger.error("批量模式需要指定模板文件")
+            logger.error("Batch mode requires --template")
             sys.exit(1)
         if not os.path.exists(args.template):
-            logger.error(f"模板文件不存在: {args.template}")
+            logger.error(f"Template file not found: {args.template}")
             sys.exit(1)
         if not os.path.isdir(args.batch):
-            logger.error(f"数据目录不存在: {args.batch}")
+            logger.error(f"Data directory not found: {args.batch}")
             sys.exit(1)
         
-        output_dir = args.output or "output"
+        output_dir = args.output_dir or "output"
         os.makedirs(output_dir, exist_ok=True)
         
         render_batch(args.batch, args.template, output_dir, strict=args.strict)
     
     else:
-        # 单文件模式
         if not args.data or not args.template or not args.output:
             parser.print_help()
             sys.exit(1)
         
         if not os.path.exists(args.data):
-            logger.error(f"数据文件不存在: {args.data}")
+            logger.error(f"Data file not found: {args.data}")
             sys.exit(1)
         if not os.path.exists(args.template):
-            logger.error(f"模板文件不存在: {args.template}")
+            logger.error(f"Template file not found: {args.template}")
             sys.exit(1)
         
         success = render_single(
-            args.data, 
-            args.template, 
+            args.data,
+            args.template,
             args.output,
             strict=args.strict,
             check_vars=not args.no_check
         )
         
         if success:
-            logger.info(f"\n✓ 渲染完成: {args.output}")
+            logger.info(f"\n✓ Render complete: {args.output}")
             sys.exit(0)
         else:
-            logger.error(f"\n✗ 渲染失败")
+            logger.error(f"\n✗ Render failed")
             sys.exit(1)
 
 
