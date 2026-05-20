@@ -5,13 +5,19 @@ Word模板渲染器
 
 将含变量占位符的docxtpl模板与Excel数据结合，生成填充好的Word文档。
 
-使用前提：
-- 模板中已包含Jinja2变量占位符，如 {{ g.company_name }}、{{ notes.remark }} 等
-- 数据来自Excel文件，结构与模板变量对应
+Sheet类型：
+- date.xxx: 键值对（字段编码只写字段名，自动组合为 date.xxx.字段名）
+- form.xxx: 循环表格（列标题对应循环项属性名）
+
+过滤器：
+- | money    金额千分位（1000 → 1,000.00）
+- | percent  百分比（0.25 → 25.00%）
+- | num      千分位数字（1000 → 1,000）
+- | default  空值默认值
 
 使用方法：
-    python template_renderer.py --data data.xlsx template.docx output.docx
-    python template_renderer.py --batch data/ output/ template.docx
+    python -m src.renderer --data data.xlsx --template template.docx --output output.docx
+    python -m src.renderer --batch data/ --template template.docx --output-dir output/
 
 作者：通用模板工具
 版本：1.0.0
@@ -131,29 +137,35 @@ class ExcelDataReader:
     def _read_key_value_sheet(self, xl, sheet_name: str) -> Dict[str, Any]:
         """
         读取键值对格式的Sheet
-        
+
         格式：
         | 字段编码 | 值 |
-        | g.company_name | XX公司 |
-        | g.date | 2025-01-15 |
+        | 公司名 | XX公司 |
+        | 有职工信息 | TRUE |
         """
         df = pd.read_excel(xl, sheet_name=sheet_name, header=None)
         result = {}
-        
+        old_format_keys = []
+
         for _, row in df.iterrows():
             key = row.iloc[0] if pd.notna(row.iloc[0]) else None
             value = row.iloc[1] if len(row) > 1 and pd.notna(row.iloc[1]) else None
-            
+
             if key is not None:
                 key_str = str(key).strip()
-                # 跳过标题行
-                if key_str.lower() in ["字段编码", "key", "名称", "变量", "field", "name", "code", 
+                if key_str.lower() in ["字段编码", "key", "名称", "变量", "field", "name", "code",
                                         "值", "value", "content", "内容"]:
                     continue
                 if not key_str:
                     continue
+                if key_str.startswith(('date.', 'form.', 'g.', 'info.', 'flags.', 'notes.')):
+                    old_format_keys.append(key_str)
+                    continue
                 result[key_str] = value
-        
+
+        if old_format_keys:
+            logger.warning(f"  [{sheet_name}] 检测到旧格式字段编码（已自动忽略）: {old_format_keys}")
+
         logger.info(f"  [{sheet_name}] 键值对: {len(result)} 条")
         return result
     
@@ -255,16 +267,6 @@ class DataMapper:
                 return ''
             return value
         return value
-    
-    def _convert_bool(self, value: Any) -> bool:
-        """Convert boolean value. Only accepts TRUE/FALSE (case-insensitive)."""
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, str):
-            return value.strip().upper() == 'TRUE'
-        if isinstance(value, (int, float)):
-            return bool(value)
-        return False
 
 
 # ============================================================
@@ -412,12 +414,15 @@ class TemplateRenderer:
     def get_undeclared_variables(self, context: Dict[str, Any]) -> set:
         """
         获取模板中未在context中定义的变量
-        
+
         用于调试和检查数据完整性。
         """
         try:
             doc = DocxTemplate(self.template_path)
-            return doc.get_undeclared_template_variables(context=context)
+            jinja_env = Environment()
+            for name, func in self.filters.items():
+                jinja_env.filters[name] = func
+            return doc.get_undeclared_template_variables(context=context, jinja_env=jinja_env)
         except Exception as e:
             logger.error(f"获取未定义变量失败: {e}")
             return set()
