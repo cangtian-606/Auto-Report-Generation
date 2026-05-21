@@ -2,6 +2,7 @@
 
 from .reader import ExcelDataReader
 from .mapper import DataMapper
+from .yaml_reader import YamlDataReader
 from .generator import DocumentGenerator, generate
 from .schema import DataSchema, SchemaValidator
 from .filters import FILTERS, filter_money, filter_percent, filter_num, filter_date
@@ -18,6 +19,7 @@ render_single = generate
 __all__ = [
     'ExcelDataReader',
     'DataMapper',
+    'YamlDataReader',
     'DocumentGenerator',
     'generate',
     'DataSchema',
