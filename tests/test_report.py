@@ -196,10 +196,10 @@ def setup_data():
 
 
 def run_render():
-    """调用 template_renderer 执行渲染"""
-    from src.renderer import render_single
+    """调用 generator 执行渲染"""
+    from src.generator import generate
 
-    success = render_single(
+    success = generate(
         str(DATA_FILE),
         str(TEMPLATE_OUT),
         str(OUTPUT_FILE),
