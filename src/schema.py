@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import pandas as pd
+
 logger = logging.getLogger(__name__)
 
 
@@ -113,5 +115,15 @@ class SchemaValidator:
                                 f"字段值非法: {sheet_name}.{field_name} "
                                 f"值应为 {field_spec.choices} 之一，实际为 {value}"
                             )
+
+            elif isinstance(data, pd.DataFrame):
+                if data.empty and sheet_schema.required:
+                    errors.append(f"必填 Sheet 无数据行: {sheet_name}")
+                    continue
+
+                columns = set(str(c).strip() for c in data.columns)
+                for field_name, field_spec in sheet_schema.fields.items():
+                    if field_spec.required and field_name not in columns:
+                        errors.append(f"必填列缺失: {sheet_name}.{field_name}")
 
         return errors

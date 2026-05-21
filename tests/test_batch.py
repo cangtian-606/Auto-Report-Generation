@@ -29,7 +29,7 @@ def batch_setup():
 
     _setup_template()
 
-    from src.generator import _render_batch
+    from src.cli import _render_batch
     results = _render_batch(
         str(DATA_DIR),
         str(TEMPLATE_PATH),

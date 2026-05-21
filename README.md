@@ -5,6 +5,7 @@
 | 文档 | 读者 | 说明 |
 |------|------|------|
 | [用户指南](docs/用户指南.md) | 业务人员 | Excel数据填写、数据格式、报告生成 |
+| [模板制作规范](docs/模板制作规范.md) | AI / 模板制作者 | 从样本报告制作模板和数据字典的标准化流程 |
 | [开发手册](docs/开发手册.md) | 开发人员/模板维护者 | 模板制作、系统架构、API、扩展开发、替换规范 |
 
 ---
@@ -57,19 +58,21 @@
 ```
 Auto-Report-Generation/
 ├── src/                         # 源码
-│   ├── __init__.py
-│   ├── renderer.py              # 模板渲染引擎
-│   └── converter.py             # 模板转换工具
+│   ├── __init__.py              # 包初始化，导出公共 API
+│   ├── generator.py             # 文档生成器 + CLI 入口
+│   ├── reader.py                # Excel 数据读取器
+│   ├── mapper.py                # 数据映射器
+│   ├── schema.py                # Schema 验证器
+│   └── exceptions.py            # 自定义异常类
 ├── tests/                       # 测试
 │   ├── __init__.py
-│   └── test_report.py
+│   ├── test_report.py           # 集成测试
+│   └── test_batch.py            # 批量处理测试
 ├── docs/                        # 文档
 │   ├── 用户指南.md              # 业务人员操作指南
 │   └── 开发手册.md              # 模板制作+开发+规范
 ├── templates/                   # Word模板
 ├── data/                        # Excel数据文件
-├── config/                      # 配置文件
-│   └── example_config.json
 ├── output/                      # 输出目录
 ├── requirements.txt
 ├── .gitignore
@@ -158,7 +161,7 @@ python -c "from docxtpl import DocxTemplate; print('OK')"
 ### 步骤3：生成文档
 
 ```bash
-python -m src.renderer --data data/data.xlsx templates/template.docx output/output.docx
+python -m src.generator --data data/data.xlsx --template templates/template.docx --output output/output.docx
 ```
 
 ### 步骤4：查看结果
@@ -199,7 +202,7 @@ data/batch/
 执行批量生成：
 
 ```bash
-python -m src.renderer --batch data/batch/ templates/template.docx output/
+python -m src.generator --batch data/batch/ --template templates/template.docx --output-dir output/
 ```
 
 生成结果保存在 `output/` 目录。

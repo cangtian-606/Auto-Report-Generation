@@ -3,28 +3,18 @@
 """自定义异常类"""
 
 
-class RenderError(Exception):
-    """渲染错误基类"""
-    pass
-
-
-class DataReadError(RenderError):
+class DataReadError(Exception):
     """数据读取错误"""
     pass
 
 
-class TemplateError(RenderError):
+class TemplateError(Exception):
     """模板错误"""
     pass
 
 
-class ValidationError(RenderError):
+class ValidationError(Exception):
     """数据验证错误"""
-    pass
-
-
-class SchemaError(ValidationError):
-    """Schema 验证错误"""
     pass
 
 

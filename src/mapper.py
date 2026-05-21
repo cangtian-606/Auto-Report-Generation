@@ -57,8 +57,4 @@ class DataMapper:
                 return True
             if upper == 'FALSE':
                 return False
-        if isinstance(value, (int, float)):
-            if value == 0:
-                return ''
-            return value
         return value
