@@ -226,7 +226,13 @@ class DocumentGenerator:
         unused: List[str] = []
         for domain_key, domain_value in context.items():
             if isinstance(domain_value, dict):
-                unused.append(domain_key)
+                for field_key in domain_value.keys():
+                    path = f"{domain_key}.{field_key}"
+                    if isinstance(domain_value[field_key], dict):
+                        for sub_key in domain_value[field_key].keys():
+                            unused.append(f"{path}.{sub_key}")
+                    else:
+                        unused.append(path)
         return unused
 
 
