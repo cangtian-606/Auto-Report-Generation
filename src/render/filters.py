@@ -2,12 +2,23 @@
 # -*- coding: utf-8 -*-
 """Jinja2 自定义过滤器"""
 
-from datetime import datetime
+from datetime import datetime as dt
 from typing import Any
 
 
+def _is_empty(value: Any) -> bool:
+    return value is None or value == ''
+
+
+def _is_zero(value: Any) -> bool:
+    try:
+        return float(value) == 0
+    except (ValueError, TypeError):
+        return False
+
+
 def filter_money(value: Any) -> str:
-    if value is None or value == '':
+    if _is_empty(value):
         return ''
     try:
         num = float(value)
@@ -19,7 +30,7 @@ def filter_money(value: Any) -> str:
 
 
 def filter_percent(value: Any) -> str:
-    if value is None or value == '':
+    if _is_empty(value):
         return ''
     try:
         num = float(value)
@@ -31,7 +42,7 @@ def filter_percent(value: Any) -> str:
 
 
 def filter_num(value: Any) -> str:
-    if value is None or value == '':
+    if _is_empty(value):
         return ''
     try:
         num = float(value)
@@ -45,42 +56,37 @@ def filter_num(value: Any) -> str:
 
 
 def filter_date(value: Any, fmt: str = '%Y年%m月%d日') -> str:
-    if value is None or value == '':
+    if _is_empty(value):
         return ''
+    if isinstance(value, dt):
+        return value.strftime(fmt)
     for pattern in ('%Y-%m-%d', '%Y/%m/%d', '%Y年%m月%d日'):
         try:
-            dt = datetime.strptime(str(value), pattern)
-            return dt.strftime(fmt)
+            return dt.strptime(str(value), pattern).strftime(fmt)
         except ValueError:
             continue
     return str(value)
 
 
 def filter_default_dash(value: Any) -> str:
-    if value is None or value == '' or value == 0:
-        return '-'
+    if _is_empty(value):
+        return ''
     return str(value)
 
 
 def filter_default(value: Any, default: str = '') -> str:
-    if value is None or value == '':
+    if _is_empty(value):
         return default
     return str(value)
 
 
 def filter_int(value: Any) -> str:
-    if value is None or value == '':
+    if _is_empty(value):
         return ''
     try:
         return str(int(float(value)))
     except (ValueError, TypeError):
         return str(value)
-
-
-def filter_str(value: Any) -> str:
-    if value is None:
-        return ''
-    return str(value)
 
 
 FILTERS = {
@@ -91,5 +97,4 @@ FILTERS = {
     'default_dash': filter_default_dash,
     'default': filter_default,
     'int': filter_int,
-    'str': filter_str,
 }

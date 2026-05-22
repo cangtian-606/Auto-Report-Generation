@@ -4,7 +4,7 @@ from pathlib import Path
 from docx import Document
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
-SRC = PROJECT_DIR / "templates" / "FDD初稿.docx"
+SRC = PROJECT_DIR / "templates" / "FDD初稿 v1.docx"
 OUT = PROJECT_DIR / "templates" / "FDD模板.docx"
 
 

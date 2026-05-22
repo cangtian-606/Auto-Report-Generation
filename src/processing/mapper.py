@@ -29,7 +29,11 @@ class DataMapper:
             elif isinstance(data, pd.DataFrame):
                 self._process_df_sheet(context, sheet_name, data)
             elif isinstance(data, list):
-                context[sheet_name] = data
+                context[sheet_name] = [
+                    {k: self._convert_value(v) for k, v in item.items()}
+                    if isinstance(item, dict) else self._convert_value(item)
+                    for item in data
+                ]
 
         return context
 
@@ -130,24 +134,26 @@ class DataMapper:
             if isinstance(current, dict) and part in current:
                 current = current[part]
             elif isinstance(current, list):
-                remaining = parts[i:]
-                parents = []
-                for row in current:
-                    inner = row
-                    for rp in remaining:
-                        if isinstance(inner, dict) and rp in inner:
-                            inner = inner[rp]
-                        else:
-                            inner = None
-                            break
-                    if isinstance(inner, list):
-                        parents.extend(inner)
-                return parents
+                return self._collect_from_list(current, parts[i:])
             else:
                 return []
         if isinstance(current, list):
             return current
         return []
+
+    def _collect_from_list(self, rows: List[dict], remaining: List[str]) -> List[dict]:
+        parents: List[dict] = []
+        for row in rows:
+            inner = row
+            for rp in remaining:
+                if isinstance(inner, dict) and rp in inner:
+                    inner = inner[rp]
+                else:
+                    inner = None
+                    break
+            if isinstance(inner, list):
+                parents.extend(inner)
+        return parents
 
     def _attach_children_by_column_flat(self, parent_rows: List[dict],
                                          raw_records: List[dict],

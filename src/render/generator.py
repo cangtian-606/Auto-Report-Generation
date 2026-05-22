@@ -3,11 +3,7 @@
 """
 Word 文档生成器
 
-将含变量占位符的 docxtpl 模板与 Excel 数据结合，生成填充好的 Word 文档。
-
-Sheet 名直接作为模板顶级变量名：
-- 键值对 Sheet：字段编码只写字段名，模板中用 {{ Sheet名.字段名 }}
-- 循环表格 Sheet：列标题对应循环项属性名，模板中用 {% for i in Sheet名 %}
+将含变量占位符的 docxtpl 模板与数据结合，生成填充好的 Word 文档。
 """
 
 import os
@@ -28,32 +24,37 @@ except ImportError:
     sys.exit(1)
 
 from ..reader.xlsx import ExcelDataReader
+from ..reader.yaml import YamlDataReader
 from ..processing.mapper import DataMapper
 from .filters import FILTERS
 from ..exceptions import TemplateSyntaxError, ValidationError
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)],
-)
 logger = logging.getLogger(__name__)
 
 
 class DocumentGenerator:
     """docxtpl 文档生成器"""
 
+    _template_cache: Dict[str, DocxTemplate] = {}
+
     def __init__(self, template_path: str) -> None:
         self.template_path = template_path
 
+    def _load_template(self) -> DocxTemplate:
+        if self.template_path not in self._template_cache:
+            logger.info(f"加载模板: {self.template_path}")
+            try:
+                self._template_cache[self.template_path] = DocxTemplate(self.template_path)
+            except Exception as e:
+                logger.error(f"加载模板失败: {e}")
+                raise
+        return self._template_cache[self.template_path]
+
     def render(self, context: Dict[str, Any], output_path: str,
                strict: bool = False) -> bool:
-        logger.info(f"加载模板: {self.template_path}")
-
         try:
-            doc = DocxTemplate(self.template_path)
-        except Exception as e:
-            logger.error(f"加载模板失败: {e}")
+            doc = self._load_template()
+        except Exception:
             return False
 
         jinja_env = Environment()
@@ -79,7 +80,7 @@ class DocumentGenerator:
 
     def get_undeclared_variables(self, context: Dict[str, Any]) -> set:
         try:
-            doc = DocxTemplate(self.template_path)
+            doc = self._load_template()
             jinja_env = Environment()
             for name, func in FILTERS.items():
                 jinja_env.filters[name] = func
@@ -125,20 +126,38 @@ class DocumentGenerator:
         return unused
 
 
-def generate(data_path: str, template_path: str, output_path: str,
-             strict: bool = False, check_vars: bool = True,
-             validate: bool = False, strict_validate: bool = False,
-             schema_path: Optional[str] = None,
-             check_syntax: bool = False,
-             report_unused: bool = False) -> bool:
-    reader = ExcelDataReader(data_path)
+def _build_context(data_path: str) -> Dict[str, Any]:
+    ext = os.path.splitext(data_path)[1].lower()
+    if ext in ('.yaml', '.yml'):
+        reader = YamlDataReader(data_path)
+    else:
+        reader = ExcelDataReader(data_path)
     raw_data = reader.read_all()
-
     mapper = DataMapper(raw_data)
     context = mapper.build_context()
-
     logger.info(f"上下文统计: {len(context)} 个顶级条目")
+    return context
 
+
+def _validate_context(context: Dict[str, Any],
+                      schema_path: Optional[str],
+                      strict_validate: bool) -> None:
+    from ..processing.schema import SchemaValidator
+    validator = SchemaValidator()
+    if schema_path:
+        validator.load_from_file(schema_path)
+    errors = validator.validate(context)
+    if errors:
+        for e in errors:
+            logger.error(f"[数据验证] {e}")
+        if strict_validate:
+            raise ValidationError(f"数据验证失败: {len(errors)} 个错误")
+
+
+def _check_and_render(context: Dict[str, Any],
+                      template_path: str, output_path: str,
+                      strict: bool, check_vars: bool,
+                      check_syntax: bool, report_unused: bool) -> bool:
     gen = DocumentGenerator(template_path)
 
     if check_vars:
@@ -155,17 +174,22 @@ def generate(data_path: str, template_path: str, output_path: str,
     if check_syntax:
         gen.check_syntax(context, strict=strict, report_unused=report_unused)
 
-    if validate:
-        from ..processing.schema import SchemaValidator
-        validator = SchemaValidator()
-        if schema_path:
-            validator.load_from_file(schema_path)
-        errors = validator.validate(raw_data)
-        if errors:
-            for e in errors:
-                logger.error(f"[数据验证] {e}")
-            if strict_validate:
-                raise ValidationError(f"数据验证失败: {len(errors)} 个错误")
+    return gen.render(context, output_path, strict=strict)
 
-    success = gen.render(context, output_path, strict=strict)
-    return success
+
+def generate(data_path: str, template_path: str, output_path: str,
+             strict: bool = False, check_vars: bool = True,
+             validate: bool = False, strict_validate: bool = False,
+             schema_path: Optional[str] = None,
+             check_syntax: bool = False,
+             report_unused: bool = False) -> bool:
+    context = _build_context(data_path)
+
+    if validate:
+        _validate_context(context, schema_path, strict_validate)
+
+    return _check_and_render(
+        context, template_path, output_path,
+        strict=strict, check_vars=check_vars,
+        check_syntax=check_syntax, report_unused=report_unused,
+    )

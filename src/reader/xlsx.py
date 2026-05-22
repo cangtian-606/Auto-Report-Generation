@@ -28,32 +28,26 @@ class ExcelDataReader:
         logger.info(f"工作表: {xl.sheet_names}")
 
         for sheet_name in xl.sheet_names:
-            data = self._read_sheet(xl, sheet_name)
-            self.data[sheet_name] = data
+            df = pd.read_excel(xl, sheet_name=sheet_name, header=None)
+            self.data[sheet_name] = self._parse_sheet(sheet_name, df)
 
         return self.data
 
-    def _read_sheet(self, xl, sheet_name: str) -> Any:
-        df = pd.read_excel(xl, sheet_name=sheet_name, header=None, nrows=5)
-
+    def _parse_sheet(self, sheet_name: str, df: pd.DataFrame) -> Any:
         if df.empty:
             return {}
 
         first_cell = str(df.iloc[0, 0]).strip().lower() if pd.notna(df.iloc[0, 0]) else ""
 
         if first_cell in self._KEY_NAMES:
-            return self._read_key_value_sheet(xl, sheet_name)
+            return self._parse_key_value(df)
+        return self._parse_table(sheet_name, df)
 
-        return self._read_table_sheet(xl, sheet_name)
-
-    def _read_key_value_sheet(self, xl, sheet_name: str) -> Dict[str, Any]:
-        df = pd.read_excel(xl, sheet_name=sheet_name, header=None)
+    def _parse_key_value(self, df: pd.DataFrame) -> Dict[str, Any]:
         result: Dict[str, Any] = {}
-
         for _, row in df.iterrows():
             key = row.iloc[0] if pd.notna(row.iloc[0]) else None
             value = row.iloc[1] if len(row) > 1 and pd.notna(row.iloc[1]) else None
-
             if key is not None:
                 key_str = str(key).strip()
                 if key_str.lower() in self._KEY_NAMES:
@@ -61,12 +55,10 @@ class ExcelDataReader:
                 if not key_str:
                     continue
                 result[key_str] = value
-
-        logger.info(f"  [{sheet_name}] 键值对: {len(result)} 条")
         return result
 
-    def _read_table_sheet(self, xl, sheet_name: str) -> pd.DataFrame:
-        df = pd.read_excel(xl, sheet_name=sheet_name, engine='openpyxl')
-        df.columns = [str(col).strip() for col in df.columns]
+    def _parse_table(self, sheet_name: str, df: pd.DataFrame) -> pd.DataFrame:
+        df.columns = [str(col).strip() for col in df.iloc[0]]
+        df = df.iloc[1:].reset_index(drop=True)
         logger.info(f"  [{sheet_name}] 表格: {len(df)} 行 x {len(df.columns)} 列")
         return df

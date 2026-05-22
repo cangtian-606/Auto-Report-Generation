@@ -22,18 +22,19 @@ logger = logging.getLogger(__name__)
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Document Generator - Generate documents from templates and Excel data",
+        description="Document Generator - Generate documents from templates and Excel/YAML data",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python -m src.cli --data data.xlsx --template template.docx --output output.docx
-  python -m src.cli --batch data/ --template template.docx --output-dir output/
-  python -m src.cli --data data.xlsx --template template.docx --output o.docx --strict
-  python -m src.cli --data data.xlsx --template template.docx --output o.docx --schema schema.json --validate
-  python -m src.cli --data data.xlsx --template template.docx --output o.docx --check-syntax --report-unused
+  python -m src --data data.xlsx --template template.docx --output output.docx
+  python -m src --data data.yaml --template template.docx --output output.docx
+  python -m src --batch data/ --template template.docx --output-dir output/
+  python -m src --data data.xlsx --template template.docx --output o.docx --strict
+  python -m src --data data.xlsx --template template.docx --output o.docx --schema schema.json --validate
+  python -m src --data data.xlsx --template template.docx --output o.docx --check-syntax --report-unused
         """,
     )
-    parser.add_argument("--data", "-d", help="Excel data file path")
+    parser.add_argument("--data", "-d", help="Data file path (.xlsx .xls .yaml .yml)")
     parser.add_argument("--template", "-t", help="Template file path (.docx)")
     parser.add_argument("--output", "-o", help="Output file path (for single mode)")
     parser.add_argument("--batch", "-b", help="Data files directory (batch mode)")
@@ -120,20 +121,20 @@ def _render_batch(data_dir: str, template_path: str, output_dir: str,
                   schema_path: Optional[str] = None) -> List[tuple]:
     results: List[tuple] = []
 
-    excel_files: List[Path] = []
-    for ext in ['*.xlsx', '*.xls']:
-        excel_files.extend(Path(data_dir).glob(ext))
-        excel_files.extend(Path(data_dir).glob(f"**/{ext}"))
+    data_files: List[Path] = []
+    for ext in ['*.xlsx', '*.xls', '*.yaml', '*.yml']:
+        data_files.extend(Path(data_dir).glob(ext))
+        data_files.extend(Path(data_dir).glob(f"**/{ext}"))
 
-    excel_files = sorted(set(excel_files))
+    data_files = sorted(set(data_files))
 
-    if not excel_files:
-        logger.error(f"在 {data_dir} 中未找到Excel文件")
+    if not data_files:
+        logger.error(f"在 {data_dir} 中未找到数据文件")
         return results
 
-    logger.info(f"找到 {len(excel_files)} 个数据文件")
+    logger.info(f"找到 {len(data_files)} 个数据文件")
 
-    for data_file in excel_files:
+    for data_file in data_files:
         logger.info(f"\n{'='*60}")
         logger.info(f"处理: {data_file.name}")
 

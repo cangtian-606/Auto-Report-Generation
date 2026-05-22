@@ -225,3 +225,26 @@ class TestNestingFormToForm:
         assert lf["股东"] == "李芳"
         assert len(lf["出资明细"]) == 1
         assert lf["出资明细"][0]["出资方式"] == "货币"
+
+
+class TestListConvertValue:
+    def test_list_items_convert_none_to_empty(self):
+        raw_data = {"列表": [{"字段": None}, {"字段": "val"}]}
+        mapper = DataMapper(raw_data)
+        ctx = mapper.build_context()
+        assert ctx["列表"][0]["字段"] == ""
+        assert ctx["列表"][1]["字段"] == "val"
+
+    def test_list_items_convert_true_string_to_bool(self):
+        raw_data = {"列表": [{"标志": "TRUE"}, {"标志": "FALSE"}]}
+        mapper = DataMapper(raw_data)
+        ctx = mapper.build_context()
+        assert ctx["列表"][0]["标志"] is True
+        assert ctx["列表"][1]["标志"] is False
+
+    def test_list_items_keep_numbers(self):
+        raw_data = {"列表": [{"金额": 100}, {"金额": 0.0}]}
+        mapper = DataMapper(raw_data)
+        ctx = mapper.build_context()
+        assert ctx["列表"][0]["金额"] == 100
+        assert ctx["列表"][1]["金额"] == 0.0
