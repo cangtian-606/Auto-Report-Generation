@@ -48,11 +48,11 @@ def _create_data_file(path, company_name, legal_person):
     wb = openpyxl.Workbook()
 
     ws_global = wb.active
-    ws_global.title = "date.全局信息"
+    ws_global.title = "全局信息"
     ws_global.append(["字段编码", "值"])
     ws_global.append(["公司名", company_name])
 
-    ws_basic = wb.create_sheet("date.基本情况")
+    ws_basic = wb.create_sheet("基本情况")
     ws_basic.append(["字段编码", "值"])
     ws_basic.append(["法定代表人", legal_person])
     ws_basic.append(["注册资本", 500.00])
@@ -70,8 +70,8 @@ def _setup_template():
     from docx import Document
 
     doc = Document()
-    doc.add_paragraph("公司名称：{{ date.全局信息.公司名 }}")
-    doc.add_paragraph("法定代表人：{{ date.基本情况.法定代表人 }}")
+    doc.add_paragraph("公司名称：{{ 全局信息.公司名 }}")
+    doc.add_paragraph("法定代表人：{{ 基本情况.法定代表人 }}")
 
     table = doc.add_table(rows=4, cols=3)
     table.style = "Table Grid"
@@ -79,7 +79,7 @@ def _setup_template():
     table.cell(0, 1).text = "金额"
     table.cell(0, 2).text = "比例"
 
-    table.cell(1, 0).paragraphs[0].add_run("{%tr for i in form.项目列表 %}")
+    table.cell(1, 0).paragraphs[0].add_run("{%tr for i in 项目列表 %}")
     table.cell(2, 0).paragraphs[0].add_run("{{ i.项目 }}")
     table.cell(2, 1).paragraphs[0].add_run("{{ i.金额 | money }}")
     table.cell(2, 2).paragraphs[0].add_run("{{ i.比例 | percent }}")

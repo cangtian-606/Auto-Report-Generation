@@ -9,7 +9,8 @@ import pytest
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
 
-from src.mapper import DataMapper
+from src.processing.mapper import DataMapper
+from src.exceptions import DataReadError
 
 
 class TestConvertValue:
@@ -60,32 +61,32 @@ class TestConvertValue:
 
 
 class TestBuildContext:
-    def test_date_sheet_builds_nested_context(self):
-        raw_data = {"date.全局信息": {"公司名": "Test公司"}}
+    def test_dict_sheet_builds_context(self):
+        raw_data = {"全局信息": {"公司名": "Test公司"}}
         mapper = DataMapper(raw_data)
         ctx = mapper.build_context()
-        assert ctx["date"]["全局信息"]["公司名"] == "Test公司"
+        assert ctx["全局信息"]["公司名"] == "Test公司"
 
-    def test_form_sheet_builds_table_context(self):
+    def test_df_sheet_builds_table_context(self):
         df = pd.DataFrame({"名称": ["A", "B"], "金额": [100, 200]})
-        raw_data = {"form.商品列表": df}
+        raw_data = {"商品列表": df}
         mapper = DataMapper(raw_data)
         ctx = mapper.build_context()
-        assert len(ctx["form"]["商品列表"]) == 2
-        assert ctx["form"]["商品列表"][0]["名称"] == "A"
+        assert len(ctx["商品列表"]) == 2
+        assert ctx["商品列表"][0]["名称"] == "A"
 
-    def test_non_prefixed_sheet_goes_to_date(self):
+    def test_non_prefixed_dict_keeps_name_as_key(self):
         raw_data = {"随便Sheet": {"key1": "val1"}}
         mapper = DataMapper(raw_data)
         ctx = mapper.build_context()
-        assert ctx["date"]["key1"] == "val1"
+        assert ctx["随便Sheet"]["key1"] == "val1"
 
-    def test_non_prefixed_dataframe_goes_to_form(self):
+    def test_non_prefixed_dataframe_keeps_name_as_key(self):
         df = pd.DataFrame({"col": [1, 2]})
         raw_data = {"任意表格": df}
         mapper = DataMapper(raw_data)
         ctx = mapper.build_context()
-        assert ctx["form"]["任意表格"] == [{"col": 1}, {"col": 2}]
+        assert ctx["任意表格"] == [{"col": 1}, {"col": 2}]
 
 
 class TestSetNested:
@@ -105,40 +106,40 @@ class TestSetNested:
 class TestNestingDateToDate:
     def test_child_kv_sheet_auto_mounts(self):
         raw_data = {
-            "date.公司": {"公司名": "Test公司"},
-            "date.公司.地址": {"省": "重庆", "市": "璧山区"},
+            "公司": {"公司名": "Test公司"},
+            "公司.地址": {"省": "重庆", "市": "璧山区"},
         }
         mapper = DataMapper(raw_data)
         ctx = mapper.build_context()
-        assert ctx["date"]["公司"]["公司名"] == "Test公司"
-        assert ctx["date"]["公司"]["地址"]["省"] == "重庆"
-        assert ctx["date"]["公司"]["地址"]["市"] == "璧山区"
+        assert ctx["公司"]["公司名"] == "Test公司"
+        assert ctx["公司"]["地址"]["省"] == "重庆"
+        assert ctx["公司"]["地址"]["市"] == "璧山区"
 
     def test_two_level_date_nesting(self):
         raw_data = {
-            "date.a": {"k": "v1"},
-            "date.a.b": {"k2": "v2"},
-            "date.a.b.c": {"k3": "v3"},
+            "a": {"k": "v1"},
+            "a.b": {"k2": "v2"},
+            "a.b.c": {"k3": "v3"},
         }
         mapper = DataMapper(raw_data)
         ctx = mapper.build_context()
-        assert ctx["date"]["a"]["k"] == "v1"
-        assert ctx["date"]["a"]["b"]["k2"] == "v2"
-        assert ctx["date"]["a"]["b"]["c"]["k3"] == "v3"
+        assert ctx["a"]["k"] == "v1"
+        assert ctx["a"]["b"]["k2"] == "v2"
+        assert ctx["a"]["b"]["c"]["k3"] == "v3"
 
 
 class TestNestingDateToForm:
     def test_child_table_sheet_auto_mounts(self):
         df = pd.DataFrame({"股东": ["张伟"], "认缴额": [600]})
         raw_data = {
-            "date.公司": {"公司名": "Test公司"},
-            "date.公司.股东出资": df,
+            "公司": {"公司名": "Test公司"},
+            "公司.股东出资": df,
         }
         mapper = DataMapper(raw_data)
         ctx = mapper.build_context()
-        assert ctx["date"]["公司"]["公司名"] == "Test公司"
-        assert len(ctx["date"]["公司"]["股东出资"]) == 1
-        assert ctx["date"]["公司"]["股东出资"][0]["股东"] == "张伟"
+        assert ctx["公司"]["公司名"] == "Test公司"
+        assert len(ctx["公司"]["股东出资"]) == 1
+        assert ctx["公司"]["股东出资"][0]["股东"] == "张伟"
 
 
 class TestNestingFormToForm:
@@ -150,12 +151,12 @@ class TestNestingFormToForm:
             "认缴额": [600, 250, 500],
         })
         raw_data = {
-            "form.项目公司": parent_df,
-            "form.项目公司.股东出资": child_df,
+            "项目公司": parent_df,
+            "项目公司.股东出资": child_df,
         }
         mapper = DataMapper(raw_data)
         ctx = mapper.build_context()
-        companies = ctx["form"]["项目公司"]
+        companies = ctx["项目公司"]
         assert len(companies) == 2
         cq = companies[0]
         assert cq["公司简称"] == "重庆晟和泰"
@@ -174,11 +175,10 @@ class TestNestingFormToForm:
             "股东": ["某人"],
         })
         raw_data = {
-            "form.项目公司": parent_df,
-            "form.项目公司.股东出资": child_df,
+            "项目公司": parent_df,
+            "项目公司.股东出资": child_df,
         }
         mapper = DataMapper(raw_data)
-        from src.exceptions import DataReadError
         with pytest.raises(DataReadError):
             mapper.build_context()
 
@@ -189,11 +189,10 @@ class TestNestingFormToForm:
             "股东": ["张伟"],
         })
         raw_data = {
-            "form.项目公司": parent_df,
-            "form.项目公司.股东出资": child_df,
+            "项目公司": parent_df,
+            "项目公司.股东出资": child_df,
         }
         mapper = DataMapper(raw_data)
-        from src.exceptions import DataReadError
         with pytest.raises(DataReadError):
             mapper.build_context()
 
@@ -209,13 +208,13 @@ class TestNestingFormToForm:
             "金额": [300, 300, 250],
         })
         raw_data = {
-            "form.项目公司": parent_df,
-            "form.项目公司.股东出资": child_df,
-            "form.项目公司.股东出资.出资明细": grandchild_df,
+            "项目公司": parent_df,
+            "项目公司.股东出资": child_df,
+            "项目公司.股东出资.出资明细": grandchild_df,
         }
         mapper = DataMapper(raw_data)
         ctx = mapper.build_context()
-        cq = ctx["form"]["项目公司"][0]
+        cq = ctx["项目公司"][0]
         assert cq["公司简称"] == "重庆晟和泰"
         zw = cq["股东出资"][0]
         assert zw["股东"] == "张伟"

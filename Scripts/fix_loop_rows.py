@@ -18,7 +18,7 @@ t1 = doc.tables[1]
 old_text = t1.cell(1, 0).text
 for p in t1.cell(1, 0).paragraphs:
     for r in p.runs: r.text = ''
-t1.cell(1, 0).paragraphs[0].add_run('{%tr for i in form.用语释义 %}')
+t1.cell(1, 0).paragraphs[0].add_run('{%tr for i in 用语释义 %}')
 # row2 and row3 data are already set as {{ i.全称 }} / {{ i.简称 }}
 # Add endfor at last row
 last_row_idx = len(t1.rows) - 1
@@ -36,7 +36,7 @@ t3 = doc.tables[3]
 # Row1: clear all, put only {%tr for %} in col0
 for ci in range(len(t3.columns)):
     set_cell_text(t3, 1, ci, '')
-t3.cell(1, 0).paragraphs[0].add_run('{%tr for i in form.股东出资 %}')
+t3.cell(1, 0).paragraphs[0].add_run('{%tr for i in 股东出资 %}')
 # Add data row
 data_row = t3.add_row()
 set_cell_text(t3, 2, 0, '{{ i.股东名称 }}')
@@ -59,7 +59,7 @@ for ri in range(len(t3.rows)):
 t5 = doc.tables[5]
 for ci in range(len(t5.columns)):
     set_cell_text(t5, 1, ci, '')
-t5.cell(1, 0).paragraphs[0].add_run('{%tr for i in form.股东出资_历史 %}')
+t5.cell(1, 0).paragraphs[0].add_run('{%tr for i in 股东出资_历史 %}')
 # Add data row
 data_row = t5.add_row()
 set_cell_text(t5, 2, 0, '{{ i.股东名称 }}')

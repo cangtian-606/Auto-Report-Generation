@@ -9,7 +9,7 @@ import logging
 from pathlib import Path
 from typing import List, Optional
 
-from .generator import generate
+from .render.generator import generate
 from .exceptions import TemplateSyntaxError, ValidationError, DataReadError
 
 logging.basicConfig(

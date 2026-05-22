@@ -5,9 +5,9 @@ Word 文档生成器
 
 将含变量占位符的 docxtpl 模板与 Excel 数据结合，生成填充好的 Word 文档。
 
-Sheet类型：
-- date.xxx: 键值对（字段编码只写字段名，自动组合为 date.xxx.字段名）
-- form.xxx: 循环表格（列标题对应循环项属性名）
+Sheet 名直接作为模板顶级变量名：
+- 键值对 Sheet：字段编码只写字段名，模板中用 {{ Sheet名.字段名 }}
+- 循环表格 Sheet：列标题对应循环项属性名，模板中用 {% for i in Sheet名 %}
 """
 
 import os
@@ -27,10 +27,10 @@ except ImportError:
     print("错误：请先安装 jinja2: pip install jinja2")
     sys.exit(1)
 
-from .reader import ExcelDataReader
-from .mapper import DataMapper
+from ..reader.xlsx import ExcelDataReader
+from ..processing.mapper import DataMapper
 from .filters import FILTERS
-from .exceptions import TemplateSyntaxError, ValidationError
+from ..exceptions import TemplateSyntaxError, ValidationError
 
 logging.basicConfig(
     level=logging.INFO,
@@ -118,15 +118,10 @@ class DocumentGenerator:
 
     def _find_unused_data(self, context: Dict[str, Any]) -> List[str]:
         unused: List[str] = []
-        for domain_key, domain_value in context.items():
-            if isinstance(domain_value, dict):
-                for field_key in domain_value.keys():
-                    path = f"{domain_key}.{field_key}"
-                    if isinstance(domain_value[field_key], dict):
-                        for sub_key in domain_value[field_key].keys():
-                            unused.append(f"{path}.{sub_key}")
-                    else:
-                        unused.append(path)
+        for key, value in context.items():
+            if isinstance(value, dict):
+                for field_key in value.keys():
+                    unused.append(f"{key}.{field_key}")
         return unused
 
 
@@ -136,14 +131,13 @@ def generate(data_path: str, template_path: str, output_path: str,
              schema_path: Optional[str] = None,
              check_syntax: bool = False,
              report_unused: bool = False) -> bool:
-    reader = ExcelDataReader(data_path, strict=strict)
+    reader = ExcelDataReader(data_path)
     raw_data = reader.read_all()
 
     mapper = DataMapper(raw_data)
     context = mapper.build_context()
 
-    logger.info(f"上下文统计: date={len(context['date'])} 个键值对, "
-                f"form={len(context['form'])} 个表格 Sheet")
+    logger.info(f"上下文统计: {len(context)} 个顶级条目")
 
     gen = DocumentGenerator(template_path)
 
@@ -162,7 +156,7 @@ def generate(data_path: str, template_path: str, output_path: str,
         gen.check_syntax(context, strict=strict, report_unused=report_unused)
 
     if validate:
-        from .schema import SchemaValidator
+        from ..processing.schema import SchemaValidator
         validator = SchemaValidator()
         if schema_path:
             validator.load_from_file(schema_path)

@@ -1,4 +1,4 @@
-"""Add outer {% for company in form.项目公司 %} loop to FDD template"""
+"""Add outer {% for company in 项目公司 %} loop to FDD template"""
 from docx import Document
 from docx.oxml.ns import qn
 
@@ -49,7 +49,7 @@ if heading_indices and end_indices:
     # Insert {% for %} before the heading paragraph
     for_para = doc.add_paragraph()
     for_para.style = doc.styles['Normal']
-    for_run = for_para.add_run('{% for company in form.项目公司 %}')
+    for_run = for_para.add_run('{% for company in 项目公司 %}')
     for_run.font.name = '宋体'
 
     # Insert {% endfor %} before the signature paragraph
@@ -74,14 +74,14 @@ if heading_indices and end_indices:
             for cell in row.cells:
                 for p in cell.paragraphs:
                     for r in p.runs:
-                        if 'form.股东出资' in r.text:
+                        if '股东出资' in r.text:
                             r.text = r.text.replace(
-                                'form.股东出资',
+                                '股东出资',
                                 'company.股东出资'
                             )
-                        if 'form.股东出资_历史' in r.text:
+                        if '股东出资_历史' in r.text:
                             r.text = r.text.replace(
-                                'form.股东出资_历史',
+                                '股东出资_历史',
                                 'company.股东出资_历史'
                             )
 

@@ -15,7 +15,7 @@ for ri in range(1, min(len(t10.rows), len(period_names) + 1)):
         cell = t10.cell(ri, ci)
         for p in cell.paragraphs:
             p.clear()
-            p.add_run(f"{{{{ date.发电量['{pn}']['{ct}'] | {ft} }}}}")
+            p.add_run(f"{{{{ 发电量['{pn}']['{ct}'] | {ft} }}}}")
 
 # verify
 for ri in range(1, min(len(t10.rows), 4)):

@@ -8,7 +8,7 @@ dist/
 build/
 
 # Output (generated reports)
-output/*.docx
+output/
 
 # IDE
 .vscode/

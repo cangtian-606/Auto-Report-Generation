@@ -30,9 +30,4 @@ class YamlDataReader:
         return self.data
 
     def read_context(self) -> Dict[str, Any]:
-        """直接返回可用于渲染的 context 结构"""
-        data = self.read_all()
-        return {
-            'date': data.get('date', {}),
-            'form': data.get('form', {}),
-        }
+        return self.read_all()

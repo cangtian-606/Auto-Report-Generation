@@ -10,11 +10,11 @@ for ri in range(1, len(t7.rows)):
         cell = t7.cell(ri, ci)
         for p in cell.paragraphs:
             for r in p.runs:
-                m = re.search(r'date\.PC合同\.(\S+)', r.text)
+                m = re.search(r'form\.PC合同\.(\S+)', r.text)
                 if m:
                     key = m.group(1)
-                    old = 'date.PC合同.' + key
-                    new = "date.PC合同['" + key + "']"
+                    old = 'PC合同.' + key
+                    new = "PC合同['" + key + "']"
                     r.text = r.text.replace(old, new)
 
 # Also fix any other problematic dot-access patterns in all cells
@@ -23,8 +23,8 @@ for t in doc.tables:
         for ci in range(len(t.columns)):
             for p in t.cell(ri, ci).paragraphs:
                 for r in p.runs:
-                    if 'date.PC合同.' in r.text and "['" not in r.text:
-                        r.text = r.text.replace('date.PC合同.', "date.PC合同['").replace(' | ', "'] | ")
+                    if 'PC合同.' in r.text and "['" not in r.text:
+                        r.text = r.text.replace('PC合同.', "PC合同['").replace(' | ', "'] | ")
 
 # Check
 for ri in range(1, len(t7.rows)):

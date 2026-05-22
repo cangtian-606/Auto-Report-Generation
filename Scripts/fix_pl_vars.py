@@ -13,7 +13,7 @@ for ri in range(1, len(t13.rows)):
         continue
     for ci in range(1, len(t13.columns)):
         period = pl_periods[ci - 1] if ci - 1 < len(pl_periods) else ''
-        var_name = f"{{{{ date.利润表['{item}_{period}'] | money }}}}"
+        var_name = f"{{{{ 利润表['{item}_{period}'] | money }}}}"
         cell = t13.cell(ri, ci)
         for p in cell.paragraphs:
             p.clear()

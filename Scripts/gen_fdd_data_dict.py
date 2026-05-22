@@ -192,19 +192,19 @@ pl_fields = [
 make_kv_sheet(wb, "date.利润表", pl_fields)
 
 # ===== Sheet 13: form.股东出资 =====
-make_table_sheet(wb, "form.股东出资", ["股东名称", "认缴出资额", "认缴比例", "实缴出资额", "实缴比例"])
+make_table_sheet(wb, "股东出资", ["股东名称", "认缴出资额", "认缴比例", "实缴出资额", "实缴比例"])
 
 # ===== Sheet 14: form.股东出资_历史 =====
-make_table_sheet(wb, "form.股东出资_历史", ["股东名称", "认缴出资额", "认缴比例", "实缴出资额", "实缴比例"])
+make_table_sheet(wb, "股东出资_历史", ["股东名称", "认缴出资额", "认缴比例", "实缴出资额", "实缴比例"])
 
 # ===== Sheet 15: form.关联方 =====
-make_table_sheet(wb, "form.关联方", ["关联方名称", "关联关系"])
+make_table_sheet(wb, "关联方", ["关联方名称", "关联关系"])
 
 # ===== Sheet 16: form.关联方余额 =====
-make_table_sheet(wb, "form.关联方余额", ["关联方", "余额_20260430", "余额_20251231", "余额_20241231"])
+make_table_sheet(wb, "关联方余额", ["关联方", "余额_20260430", "余额_20251231", "余额_20241231"])
 
 # ===== Sheet 17: form.关联方交易 =====
-make_table_sheet(wb, "form.关联方交易", ["关联方", "金额_2026年1至4月", "金额_2025年度", "金额_2024年度"])
+make_table_sheet(wb, "关联方交易", ["关联方", "金额_2026年1至4月", "金额_2025年度", "金额_2024年度"])
 
 wb.save(str(OUT))
 print(f"Data dictionary saved: {OUT}")

@@ -3,7 +3,7 @@ from docx import Document
 
 doc = Document()
 
-doc.add_paragraph('{% for company in form.项目公司 %}')
+doc.add_paragraph('{% for company in 项目公司 %}')
 doc.add_paragraph()
 
 doc.add_paragraph('================================================================')

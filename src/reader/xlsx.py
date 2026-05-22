@@ -7,8 +7,6 @@ from typing import Dict, Any
 
 import pandas as pd
 
-from .exceptions import DataReadError
-
 logger = logging.getLogger(__name__)
 
 
@@ -20,9 +18,8 @@ class ExcelDataReader:
         "值", "value", "content", "内容",
     ])
 
-    def __init__(self, file_path: str, strict: bool = False) -> None:
+    def __init__(self, file_path: str) -> None:
         self.file_path = file_path
-        self.strict = strict
         self.data: Dict[str, Any] = {}
 
     def read_all(self) -> Dict[str, Any]:
@@ -52,7 +49,6 @@ class ExcelDataReader:
     def _read_key_value_sheet(self, xl, sheet_name: str) -> Dict[str, Any]:
         df = pd.read_excel(xl, sheet_name=sheet_name, header=None)
         result: Dict[str, Any] = {}
-        old_format_keys = []
 
         for _, row in df.iterrows():
             key = row.iloc[0] if pd.notna(row.iloc[0]) else None
@@ -64,16 +60,7 @@ class ExcelDataReader:
                     continue
                 if not key_str:
                     continue
-                if key_str.startswith(('date.', 'form.', 'g.', 'info.', 'flags.', 'notes.')):
-                    old_format_keys.append(key_str)
-                    continue
                 result[key_str] = value
-
-        if old_format_keys:
-            msg = f"[{sheet_name}] 检测到旧格式字段编码: {old_format_keys}"
-            if self.strict:
-                raise DataReadError(msg)
-            logger.warning(f"  {msg}（已自动忽略）")
 
         logger.info(f"  [{sheet_name}] 键值对: {len(result)} 条")
         return result

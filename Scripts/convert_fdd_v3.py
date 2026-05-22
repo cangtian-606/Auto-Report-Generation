@@ -49,13 +49,13 @@ def convert():
         full = ''.join(r.text for r in p.runs)
         if '【】' in full:
             for r in p.runs: r.text = ''
-            if p.runs: p.runs[0].text = full.replace('【】', '{{ date.全局.公司简称 }}')
+            if p.runs: p.runs[0].text = full.replace('【】', '{{ 全局.公司简称 }}')
     # Row 2 col 0: 文号
     for p in t0.cell(2, 0).paragraphs:
         full = ''.join(r.text for r in p.runs)
         for r in p.runs: r.text = ''
         if p.runs:
-            p.runs[0].text = '大华咨字[{{ date.全局.报告文号 }}]号'
+            p.runs[0].text = '大华咨字[{{ 全局.报告文号 }}]号'
     print("[OK] Cover page")
 
     # ============ SECTION 1: 释义 (Table[1]) - form.用语释义 ============
@@ -70,7 +70,7 @@ def convert():
     for p in doc.paragraphs:
         # Replace 2026年4月30日 with base date variable
         for r in p.runs:
-            r.text = r.text.replace('2026年4月30日', '{{ date.全局.尽调基准日 }}')
+            r.text = r.text.replace('2026年4月30日', '{{ 全局.尽调基准日 }}')
 
     print("[OK] Date replacements in paragraphs")
 
@@ -83,26 +83,26 @@ def convert():
                     if '大华咨字[2026]XXXX号' in r.text:
                         r.text = r.text.replace(
                             '大华咨字[2026]XXXX号',
-                            '{{ date.全局.报告文号 }}'
+                            '{{ 全局.报告文号 }}'
                         )
                         print(f"[OK] Header section[{si}]")
 
     # ============ TABLE[2]: 基本信息 (9 rows key-value) ============
     t2 = doc.tables[2]
-    # row[0]: 公司名称 | xxxx  → 公司名称 | {{ date.基本情况.公司名称 }}
-    # row[1]: 统一社会信用代码 | xxxx → 统一社会信用代码 | {{ date.基本情况.信用代码 }}
+    # row[0]: 公司名称 | xxxx  → 公司名称 | {{ 基本情况.公司名称 }}
+    # row[1]: 统一社会信用代码 | xxxx → 统一社会信用代码 | {{ 基本情况.信用代码 }}
     # row[2]: 注册地址 | xxxx → ...
     # row[8]: 营业期限 | xxxx → ...
     field_map_t2 = {
-        '公司名称': '{{ date.基本情况.公司名称 }}',
-        '统一社会信用代码': '{{ date.基本情况.信用代码 }}',
-        '注册地址': '{{ date.基本情况.注册地址 }}',
-        '法定代表人': '{{ date.基本情况.法定代表人 }}',
-        '公司类型': '{{ date.基本情况.公司类型 }}',
-        '注册资本': '{{ date.基本情况.注册资本 | num }}',
-        '经营范围': '{{ date.基本情况.经营范围 }}',
-        '成立日期': '{{ date.基本情况.成立日期 }}',
-        '营业期限': '{{ date.基本情况.营业期限 }}',
+        '公司名称': '{{ 基本情况.公司名称 }}',
+        '统一社会信用代码': '{{ 基本情况.信用代码 }}',
+        '注册地址': '{{ 基本情况.注册地址 }}',
+        '法定代表人': '{{ 基本情况.法定代表人 }}',
+        '公司类型': '{{ 基本情况.公司类型 }}',
+        '注册资本': '{{ 基本情况.注册资本 | num }}',
+        '经营范围': '{{ 基本情况.经营范围 }}',
+        '成立日期': '{{ 基本情况.成立日期 }}',
+        '营业期限': '{{ 基本情况.营业期限 }}',
     }
     for ri in range(len(t2.rows)):
         key = t2.cell(ri, 0).text.strip()
@@ -110,7 +110,7 @@ def convert():
             set_cell_text(t2, ri, 1, field_map_t2[key])
         # Also handle "注册资本" which might have extra text
         elif '注册资本' in key:
-            set_cell_text(t2, ri, 1, '{{ date.基本情况.注册资本 | num }}')
+            set_cell_text(t2, ri, 1, '{{ 基本情况.注册资本 | num }}')
     print("[OK] Table[2] 基本信息")
 
     # ============ TABLE[3]: 股东出资 (form.股东出资) ============
@@ -119,7 +119,7 @@ def convert():
     # Rebuild as for / data / endfor
     for ci in range(len(t3.columns)):
         set_cell_text(t3, 1, ci, '')
-    set_cell_text(t3, 1, 0, '{%tr for i in form.股东出资 %}')
+    set_cell_text(t3, 1, 0, '{%tr for i in 股东出资 %}')
     set_cell_text(t3, 1, 1, '{{ i.认缴出资额 | money }}')
     set_cell_text(t3, 1, 2, '{{ i.认缴比例 | percent }}')
     set_cell_text(t3, 1, 3, '{{ i.实缴出资额 | money }}')
@@ -141,7 +141,7 @@ def convert():
     t5 = doc.tables[5]
     for ci in range(len(t5.columns)):
         set_cell_text(t5, 1, ci, '')
-    set_cell_text(t5, 1, 0, '{%tr for i in form.股东出资_历史 %}')
+    set_cell_text(t5, 1, 0, '{%tr for i in 股东出资_历史 %}')
     set_cell_text(t5, 1, 1, '{{ i.认缴出资额 | money }}')
     set_cell_text(t5, 1, 2, '{{ i.认缴比例 | percent }}')
     set_cell_text(t5, 1, 3, '{{ i.实缴出资额 | money }}')
@@ -160,7 +160,7 @@ def convert():
         r = ri + 1
         set_cell_text(t7, r, 0, str(r))
         set_cell_text(t7, r, 1, var_name)
-        set_cell_text(t7, r, 3, '{{ date.PC合同.' + var_name + ' | money }}')
+        set_cell_text(t7, r, 3, '{{ PC合同.' + var_name + ' | money }}')
     print("[OK] Table[7] PC合同分项造价")
 
     # ============ TABLE[8]: 税率表 - KEEP AS-IS ============
@@ -174,67 +174,67 @@ def convert():
         # P[102]: 公司设立
         if '公司系由' in full and '出资组建' in full:
             for r in p.runs: r.text = ''
-            new = '公司系由{{ date.历史沿革.出资方 }}出资组建，于{{ date.历史沿革.设立时间 }}取得{{ date.历史沿革.核发机关 }}核发的、统一社会信用代码为{{ date.基本情况.信用代码 }}的企业法人营业执照。设立时股权结构如下：'
+            new = '公司系由{{ 历史沿革.出资方 }}出资组建，于{{ 历史沿革.设立时间 }}取得{{ 历史沿革.核发机关 }}核发的、统一社会信用代码为{{ 基本情况.信用代码 }}的企业法人营业执照。设立时股权结构如下：'
             if p.runs: p.runs[0].text = new
 
         # P[108]: 项目概况
         if '项目位于' in full and '实际装机容量' in full:
             for r in p.runs: r.text = ''
-            new = '{{ date.项目概况.项目简称 }}项目位于{{ date.项目概况.项目地址 }}，实际装机容量为{{ date.项目概况.装机容量 | num }}MW，采用"自发自用，余量上网"运行方式。'
+            new = '{{ 项目概况.项目简称 }}项目位于{{ 项目概况.项目地址 }}，实际装机容量为{{ 项目概况.装机容量 | num }}MW，采用"自发自用，余量上网"运行方式。'
             if p.runs: p.runs[0].text = new
 
         # P[110]: 项目总投资
         if '竣工安装容量' in full and '不含税工程总价' in full:
             for r in p.runs: r.text = ''
-            new = '{{ date.项目概况.项目简称 }}项目竣工安装容量为{{ date.项目概况.竣工容量 | num }}MW，不含税工程总价为{{ date.项目概况.工程总价 | money }}元，不含税建设单价为{{ date.项目概况.建设单价 | money }}元/Wp。'
+            new = '{{ 项目概况.项目简称 }}项目竣工安装容量为{{ 项目概况.竣工容量 | num }}MW，不含税工程总价为{{ 项目概况.工程总价 | money }}元，不含税建设单价为{{ 项目概况.建设单价 | money }}元/Wp。'
             if p.runs: p.runs[0].text = new
 
         # P[114]: 承包单位
         if '乙方（承包单位）' in full and '【】' in full:
             for r in p.runs: r.text = ''
-            new = '（1）乙方（承包单位）：{{ date.PC合同.承包单位 }}'
+            new = '（1）乙方（承包单位）：{{ PC合同.承包单位 }}'
             if p.runs: p.runs[0].text = new
 
         # P[115]: 工程内容
         if '工程内容及规模' in full and '【】' in full:
             for r in p.runs: r.text = ''
-            new = '（2）工程内容及规模：{{ date.PC合同.工程内容 }}'
+            new = '（2）工程内容及规模：{{ PC合同.工程内容 }}'
             if p.runs: p.runs[0].text = new
 
         # P[118]: PC合同总价
         if '合同总价为' in full and '分项价格' in full:
             for r in p.runs: r.text = ''
-            new = '（4）{{ date.项目概况.项目简称 }}合同总价为{{ date.PC合同.合同总价 | money }}元，分项价格如下：'
+            new = '（4）{{ 项目概况.项目简称 }}合同总价为{{ PC合同.合同总价 | money }}元，分项价格如下：'
             if p.runs: p.runs[0].text = new
 
         # P[120]: EMC合同名称
         if '合同名称' in full and '《xxxx》' in full:
             for r in p.runs: r.text = ''
-            new = '①合同名称：《{{ date.EMC合同.合同名称 }}》'
+            new = '①合同名称：《{{ EMC合同.合同名称 }}》'
             if p.runs: p.runs[0].text = new
 
         # P[121]: 用能方
         if '用能方' in full and '【】' in full:
             for r in p.runs: r.text = ''
-            new = '②用能方：{{ date.EMC合同.用能方 }}'
+            new = '②用能方：{{ EMC合同.用能方 }}'
             if p.runs: p.runs[0].text = new
 
         # P[122]: 房屋所有权证书登记人
         if '房屋所有权证书登记人' in full and '【】' in full:
             for r in p.runs: r.text = ''
-            new = '③房屋所有权证书登记人：{{ date.EMC合同.登记人 }}'
+            new = '③房屋所有权证书登记人：{{ EMC合同.登记人 }}'
             if p.runs: p.runs[0].text = new
 
         # P[126]: 结算方式 (empty / [])
         if '结算方式' in full and '[]' in full:
             for r in p.runs: r.text = ''
-            new = '⑤结算方式：{{ date.EMC合同.结算方式 }}'
+            new = '⑤结算方式：{{ EMC合同.结算方式 }}'
             if p.runs: p.runs[0].text = new
 
         # P[128]: 购售电合同
         if '截至尽调基准日' in full and '已并网发电' in full:
             for r in p.runs: r.text = ''
-            new = '截至尽调基准日，{{ date.项目概况.项目简称 }}项目已并网发电。根据与{{ date.购售电合同.电网公司 }}签订的"非自然人分布式光伏发电项目购售电合同"，公司项目以余电上网模式消纳电量，电费由上网电费和补贴两部分组成，上网电费按上网电量与当地燃煤发电机组基准价（含脱硫、脱硝、除尘电价）乘积计算，补贴按发电量与对应的发电补贴标准（含税）乘积计算。'
+            new = '截至尽调基准日，{{ 项目概况.项目简称 }}项目已并网发电。根据与{{ 购售电合同.电网公司 }}签订的"非自然人分布式光伏发电项目购售电合同"，公司项目以余电上网模式消纳电量，电费由上网电费和补贴两部分组成，上网电费按上网电量与当地燃煤发电机组基准价（含脱硫、脱硝、除尘电价）乘积计算，补贴按发电量与对应的发电补贴标准（含税）乘积计算。'
             if p.runs: p.runs[0].text = new
 
     print("[OK] Paragraph replacements")

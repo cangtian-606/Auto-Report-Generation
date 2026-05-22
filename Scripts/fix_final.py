@@ -26,7 +26,7 @@ for p in t9.cell(0, 2).paragraphs:
     if '【】' in full:
         for r in p.runs: r.text = ''
         if p.runs:
-            p.runs[0].text = full.replace('【】', '{{ date.全局.公司简称 }}')
+            p.runs[0].text = full.replace('【】', '{{ 全局.公司简称 }}')
 
 doc.save('templates/FDD_项目概况模板.docx')
 
