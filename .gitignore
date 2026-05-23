@@ -10,6 +10,12 @@ build/
 # Output (generated reports)
 output/
 
+# Logs
+logs/
+
+# pytest
+.pytest_cache/
+
 # IDE
 .vscode/
 .idea/

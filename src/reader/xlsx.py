@@ -24,8 +24,8 @@ class ExcelDataReader:
 
     def read_all(self) -> Dict[str, Any]:
         xl = pd.ExcelFile(self.file_path, engine='openpyxl')
-        logger.info(f"读取Excel: {self.file_path}")
-        logger.info(f"工作表: {xl.sheet_names}")
+        logger.debug("读取Excel: %s", self.file_path)
+        logger.debug("工作表: %s", xl.sheet_names)
 
         for sheet_name in xl.sheet_names:
             df = pd.read_excel(xl, sheet_name=sheet_name, header=None)
@@ -60,5 +60,5 @@ class ExcelDataReader:
     def _parse_table(self, sheet_name: str, df: pd.DataFrame) -> pd.DataFrame:
         df.columns = [str(col).strip() for col in df.iloc[0]]
         df = df.iloc[1:].reset_index(drop=True)
-        logger.info(f"  [{sheet_name}] 表格: {len(df)} 行 x {len(df.columns)} 列")
+        logger.debug("  [%s] 表格: %d 行 x %d 列", sheet_name, len(df), len(df.columns))
         return df

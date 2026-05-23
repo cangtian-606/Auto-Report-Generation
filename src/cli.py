@@ -9,14 +9,11 @@ import logging
 from pathlib import Path
 from typing import List, Optional
 
-from .render.generator import generate
-from .exceptions import TemplateSyntaxError, ValidationError, DataReadError
+from .orchestrator import generate
+from .exceptions import TemplateError, ValidationError, DataReadError
+from .logging_config import configure_logging
+from .path_guard import validate_path
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)],
-)
 logger = logging.getLogger(__name__)
 
 
@@ -52,18 +49,50 @@ Examples:
                         help="Check template syntax before rendering")
     parser.add_argument("--report-unused", action="store_true",
                         help="Report unused data fields")
+    parser.add_argument("--verbose", "-v", action="store_true",
+                        help="Enable verbose (DEBUG) terminal output")
+    parser.add_argument("--quiet", "-q", action="store_true",
+                        help="Suppress non-error terminal output (WARNING only)")
+    parser.add_argument("--log-file", help="Write full debug log to file")
 
     args = parser.parse_args()
 
+    # 日志配置: 用户错误→warning(stderr), 程序异常→error/exception(stderr), 进度→info(stdout)
+    terminal_level = logging.INFO
+    if args.verbose:
+        terminal_level = logging.DEBUG
+    if args.quiet:
+        terminal_level = logging.WARNING
+
+    configure_logging(
+        terminal_level=terminal_level,
+        log_file=args.log_file,
+    )
+
+    project_root = Path(__file__).parent.parent.absolute()
+    allowed_data_dirs = [str(project_root / "data"), str(project_root)]
+    allowed_template_dirs = [str(project_root / "templates"), str(project_root)]
+    allowed_output_dirs = [str(project_root / "output"), str(project_root)]
+
     if args.batch:
         if not args.template:
-            logger.error("Batch mode requires --template")
+            logger.warning("Batch mode requires --template")
             sys.exit(1)
-        if not os.path.exists(args.template):
-            logger.error(f"Template file not found: {args.template}")
+
+        try:
+            args.template = validate_path(args.template, allowed_template_dirs, must_exist=True)
+            args.batch = validate_path(args.batch, allowed_data_dirs, must_exist=True)
+            if args.schema:
+                args.schema = validate_path(args.schema, allowed_data_dirs, must_exist=True)
+        except PermissionError as e:
+            logger.warning("路径校验失败: %s", e)
             sys.exit(1)
+        except FileNotFoundError as e:
+            logger.warning("文件不存在: %s", e)
+            sys.exit(1)
+
         if not os.path.isdir(args.batch):
-            logger.error(f"Data directory not found: {args.batch}")
+            logger.warning("不是目录: %s", args.batch)
             sys.exit(1)
 
         output_dir = args.output_dir or "output"
@@ -81,11 +110,17 @@ Examples:
             parser.print_help()
             sys.exit(1)
 
-        if not os.path.exists(args.data):
-            logger.error(f"Data file not found: {args.data}")
+        try:
+            args.data = validate_path(args.data, allowed_data_dirs, must_exist=True)
+            args.template = validate_path(args.template, allowed_template_dirs, must_exist=True)
+            args.output = validate_path(args.output, allowed_output_dirs)
+            if args.schema:
+                args.schema = validate_path(args.schema, allowed_data_dirs, must_exist=True)
+        except PermissionError as e:
+            logger.warning("路径校验失败: %s", e)
             sys.exit(1)
-        if not os.path.exists(args.template):
-            logger.error(f"Template file not found: {args.template}")
+        except FileNotFoundError as e:
+            logger.warning("文件不存在: %s", e)
             sys.exit(1)
 
         try:
@@ -101,15 +136,15 @@ Examples:
                 check_syntax=args.check_syntax,
                 report_unused=args.report_unused,
             )
-        except (TemplateSyntaxError, ValidationError, DataReadError) as e:
-            logger.error(f"\n✗ {e}")
+        except (TemplateError, ValidationError, DataReadError) as e:
+            logger.error("\n✗ %s", e)
             sys.exit(1)
 
         if success:
-            logger.info(f"\n✓ Render complete: {args.output}")
+            logger.info("\n✓ Render complete: %s", args.output)
             sys.exit(0)
         else:
-            logger.error(f"\n✗ Render failed")
+            logger.error("\n✗ Render failed")
             sys.exit(1)
 
 
@@ -129,14 +164,14 @@ def _render_batch(data_dir: str, template_path: str, output_dir: str,
     data_files = sorted(set(data_files))
 
     if not data_files:
-        logger.error(f"在 {data_dir} 中未找到数据文件")
+        logger.warning("在 %s 中未找到数据文件", data_dir)
         return results
 
-    logger.info(f"找到 {len(data_files)} 个数据文件")
+    logger.info("找到 %d 个数据文件", len(data_files))
 
     for data_file in data_files:
-        logger.info(f"\n{'='*60}")
-        logger.info(f"处理: {data_file.name}")
+        logger.debug("=" * 60)
+        logger.info("处理: %s", data_file.name)
 
         base_name = data_file.stem
         if base_name.startswith('data_'):
@@ -157,16 +192,19 @@ def _render_batch(data_dir: str, template_path: str, output_dir: str,
             results.append((str(data_file), success))
 
             if success:
-                logger.info(f"✓ 成功: {output_path}")
+                logger.info("✓ 成功: %s", output_path)
             else:
-                logger.error(f"✗ 失败: {data_file.name}")
-        except Exception as e:
-            logger.error(f"✗ 异常: {data_file.name} - {e}")
+                logger.error("✗ 失败: %s", data_file.name)
+        except KeyboardInterrupt:
+            logger.warning("\n用户中断，停止批量处理（已处理 %d 个文件）", len(results))
+            raise
+        except Exception:
+            logger.exception("✗ 异常: %s", data_file.name)
             results.append((str(data_file), False))
 
     success_count = sum(1 for _, s in results if s)
-    logger.info(f"\n{'='*60}")
-    logger.info(f"批量处理完成: {success_count}/{len(results)} 成功")
+    logger.debug("=" * 60)
+    logger.info("批量处理完成: %d/%d 成功", success_count, len(results))
 
     return results
 

@@ -24,7 +24,7 @@ class YamlDataReader:
         self.data: Dict[str, Any] = {}
 
     def read_all(self) -> Dict[str, Any]:
-        logger.info(f"读取YAML: {self.file_path}")
+        logger.debug("读取YAML: %s", self.file_path)
         with open(self.file_path, 'r', encoding='utf-8') as f:
             self.data = yaml.safe_load(f) or {}
         return self.data

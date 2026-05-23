@@ -78,6 +78,7 @@ class SchemaValidator:
         errors: List[str] = []
 
         if self.schema is None:
+            logger.warning("Schema 未加载，跳过数据校验。请先调用 load_from_file() 或 load_from_dict()")
             return errors
 
         for entry_name, entry_schema in self.schema.entries.items():
