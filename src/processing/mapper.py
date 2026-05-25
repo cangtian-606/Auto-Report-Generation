@@ -98,6 +98,10 @@ class DataMapper:
                 f"找不到父表 '{parent_path}'，无法挂载子表 '{full_path}'"
             )
 
+        if isinstance(parent_target, dict):
+            parent_target[child_key] = records
+            return
+
         self._attach_children_by_column_flat(
             parent_target, records, parent_col, child_key, full_path
         )
@@ -127,7 +131,8 @@ class DataMapper:
                 return col_str[8:]
         return None
 
-    def _resolve_form_parent(self, domain_root: Dict[str, Any], parent_path: str) -> List[dict]:
+    def _resolve_form_parent(self, domain_root: Dict[str, Any], parent_path: str):
+        """解析父表路径，返回 list（表格父表）或 dict（键值对父表）"""
         parts = parent_path.split('.')
         current = domain_root
         for i, part in enumerate(parts):
@@ -136,10 +141,8 @@ class DataMapper:
             elif isinstance(current, list):
                 return self._collect_from_list(current, parts[i:])
             else:
-                return []
-        if isinstance(current, list):
-            return current
-        return []
+                return None
+        return current
 
     def _collect_from_list(self, rows: List[dict], remaining: List[str]) -> List[dict]:
         parents: List[dict] = []

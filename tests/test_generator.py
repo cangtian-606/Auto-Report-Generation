@@ -111,3 +111,105 @@ class TestDocumentGenerator:
         gen2 = DocumentGenerator(str(simple_template))
         doc3 = gen2._load_template()
         assert doc3 is doc1
+
+    def test_tc_column_loop(self, temp_dir):
+        """测试 {%tc for %} 列循环渲染 — 表头 + 多行数据"""
+        from docx import Document
+        tmpl_path = temp_dir / "tc_template.docx"
+        out_path = temp_dir / "tc_output.docx"
+
+        doc = Document()
+        table = doc.add_table(rows=3, cols=5, style="Table Grid")
+
+        # Row 0: 表头 — tc 循环动态生成月份列
+        h = table.rows[0]
+        h.cells[0].text = "产品"
+        h.cells[1].paragraphs[0].text = "{%tc for month in months %}"
+        h.cells[2].paragraphs[0].text = "{{ month }}"
+        h.cells[3].paragraphs[0].text = "{%tc endfor %}"
+        h.cells[4].text = "合计"
+
+        # Row 1: 数据行 A
+        a = table.rows[1]
+        a.cells[0].text = "产品A"
+        a.cells[1].paragraphs[0].text = "{%tc for month in months %}"
+        a.cells[2].paragraphs[0].text = "{{ data_a[month] | money }}"
+        a.cells[3].paragraphs[0].text = "{%tc endfor %}"
+        a.cells[4].text = "{{ total_a | money }}"
+
+        # Row 2: 数据行 B
+        b = table.rows[2]
+        b.cells[0].text = "产品B"
+        b.cells[1].paragraphs[0].text = "{%tc for month in months %}"
+        b.cells[2].paragraphs[0].text = "{{ data_b[month] | money }}"
+        b.cells[3].paragraphs[0].text = "{%tc endfor %}"
+        b.cells[4].text = "{{ total_b | money }}"
+
+        doc.save(tmpl_path)
+
+        gen = DocumentGenerator(str(tmpl_path))
+        ctx = {
+            "months": ["1月", "2月", "3月"],
+            "data_a": {"1月": 100, "2月": 200, "3月": 150},
+            "total_a": 450,
+            "data_b": {"1月": 80, "2月": 120, "3月": 90},
+            "total_b": 290,
+        }
+
+        result = gen.render(ctx, str(out_path))
+        assert result is True
+        assert out_path.exists()
+
+        out_doc = Document(str(out_path))
+        cells = [c.text.strip() for c in out_doc.tables[0].rows[0].cells]
+        assert cells[0] == "产品"
+        assert cells[1] == "1月"
+        assert cells[2] == "2月"
+        assert cells[3] == "3月"
+        assert cells[4] == "合计"
+
+        row_a = [c.text.strip() for c in out_doc.tables[0].rows[1].cells]
+        assert row_a[0] == "产品A"
+        assert row_a[1] == "100.00"
+        assert row_a[4] == "450.00"
+
+    def test_for_block_loop(self, temp_dir):
+        """测试 {% for %} 块级循环 — 多段落按列表迭代"""
+        from docx import Document
+        tmpl_path = temp_dir / "for_block_template.docx"
+        out_path = temp_dir / "for_block_output.docx"
+
+        doc = Document()
+        doc.add_paragraph("项目基本情况报告")
+        doc.add_paragraph("")
+        doc.add_paragraph("{% for i in 项目基本情况.项目公司 %}")
+        doc.add_paragraph(
+            "{{ i.项目名称 }}位于{{ i.项目地址 }}，"
+            "装机容量{{ i.项目装机量 }}，"
+            "采用\u201c{{ i.项目模式 }}\u201d运行方式。"
+        )
+        doc.add_paragraph("{% endfor %}")
+        doc.save(tmpl_path)
+
+        gen = DocumentGenerator(str(tmpl_path))
+        ctx = {
+            "项目基本情况": {
+                "项目公司": [
+                    {"项目名称": "重庆电站", "项目地址": "重庆", "项目装机量": "50MW", "项目模式": "全额上网"},
+                    {"项目名称": "安徽风场", "项目地址": "六安", "项目装机量": "100MW", "项目模式": "自发自用"},
+                ]
+            }
+        }
+
+        result = gen.render(ctx, str(out_path))
+        assert result is True
+
+        out_doc = Document(str(out_path))
+        texts = [p.text.strip() for p in out_doc.paragraphs if p.text.strip()]
+        assert "项目基本情况报告" in texts[0]
+        assert any("重庆电站" in t for t in texts)
+        assert any("安徽风场" in t for t in texts)
+        # {% for %} 标签行不应残留
+        assert not any("{%" in t for t in texts)
+        # 2 个公司 → 至少 3 个段落 (标题 + 2 段公司)
+        assert len(texts) >= 3
