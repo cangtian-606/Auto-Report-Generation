@@ -86,12 +86,6 @@ class DataMapper:
         parent_path, child_key = parts
         records = data.to_dict('records')
 
-        parent_col = self._extract_parent_col(data)
-        if parent_col is None:
-            raise DataReadError(
-                f"子表 '{full_path}' 缺少 _parent_ 开头列，无法关联父表 '{parent_path}'"
-            )
-
         parent_target = self._resolve_form_parent(context, parent_path)
         if parent_target is None:
             raise DataReadError(
@@ -101,6 +95,12 @@ class DataMapper:
         if isinstance(parent_target, dict):
             parent_target[child_key] = records
             return
+
+        parent_col = self._extract_parent_col(data)
+        if parent_col is None:
+            raise DataReadError(
+                f"子表 '{full_path}' 缺少 _parent_ 开头列，无法关联父表 '{parent_path}'"
+            )
 
         self._attach_children_by_column_flat(
             parent_target, records, parent_col, child_key, full_path
