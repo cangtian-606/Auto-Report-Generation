@@ -7,20 +7,22 @@ from pathlib import Path
 import pytest
 from docx import Document
 
-PROJECT_DIR = Path(__file__).resolve().parent.parent
+TESTS_DIR = Path(__file__).resolve().parent
+PROJECT_DIR = TESTS_DIR.parent
 sys.path.insert(0, str(PROJECT_DIR))
 
-DATA_DIR = PROJECT_DIR / "data"
-TEMPLATE_PATH = PROJECT_DIR / "templates" / "报告模板.docx"
-OUTPUT_DIR = PROJECT_DIR / "output" / "batch"
+DATA_DIR = TESTS_DIR / "data"
+TEMPLATE_DIR = TESTS_DIR / "templates"
+TEMPLATE_PATH = TEMPLATE_DIR / "报告模板.docx"
+OUTPUT_DIR = TESTS_DIR / "output" / "batch"
 
 
 @pytest.fixture(scope="module")
 def batch_setup():
     """准备2份测试数据 Excel，执行批量渲染"""
-    import os
-    os.makedirs(DATA_DIR, exist_ok=True)
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    TEMPLATE_DIR.mkdir(parents=True, exist_ok=True)
     if TEMPLATE_PATH.exists():
         TEMPLATE_PATH.unlink()
 
