@@ -164,6 +164,7 @@ class TcInheritancePreprocessor:
 
             tag = f"{{%tc for {var_name} in {expr} %}}"
             _XmlHelper._prepend_text(cells[start_idx], tag)
+            _XmlHelper._clear_cell(cells[end_idx])
             _XmlHelper._append_text(cells[end_idx], "{%tc endfor %}")
             modified = True
 
