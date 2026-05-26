@@ -9,16 +9,13 @@
 """
 
 import re
-import os
-import zipfile
-import tempfile
-import shutil
 import copy
 import logging
-from pathlib import Path
 from typing import List, Optional, Tuple
 
 from lxml import etree
+
+from .docx_editor import DocxEditor
 
 logger = logging.getLogger(__name__)
 
@@ -116,26 +113,14 @@ class TcInheritancePreprocessor:
     """检测表格首行的 {%tc for %} 声明，自动施加到后续行。"""
 
     def process(self, input_path: str, output_path: str) -> int:
-        tmp_dir = tempfile.mkdtemp()
-        try:
-            with zipfile.ZipFile(input_path, "r") as zin:
-                zin.extractall(tmp_dir)
-            doc_xml = Path(tmp_dir) / "word" / "document.xml"
-            tree = etree.parse(str(doc_xml))
-            root = tree.getroot()
-
+        with DocxEditor(input_path) as editor:
+            root = editor.root
             modified_tables = 0
             for tbl in root.iter(f"{{{W}}}tbl"):
                 if self._apply_tc_inheritance(tbl):
                     modified_tables += 1
-
-            if modified_tables > 0:
-                tree.write(str(doc_xml), xml_declaration=True, encoding="UTF-8", standalone=True)
-
-            self._repack(tmp_dir, output_path)
+            editor.save_to(output_path, modified=modified_tables > 0)
             return modified_tables
-        finally:
-            shutil.rmtree(tmp_dir, ignore_errors=True)
 
     # ---- tc 核心逻辑 ----
     def _apply_tc_inheritance(self, tbl: etree._Element) -> bool:
@@ -192,18 +177,6 @@ class TcInheritancePreprocessor:
                 return (var_name, expr, start_idx, ci)
         return None
 
-    @staticmethod
-    def _repack(tmp_dir: str, output_path: str) -> None:
-        if Path(output_path).exists():
-            Path(output_path).unlink()
-        with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zout:
-            for dirpath, _, filenames in os.walk(tmp_dir):
-                for fname in filenames:
-                    fpath = Path(dirpath) / fname
-                    arcname = str(fpath.relative_to(tmp_dir)).replace("\\", "/")
-                    zout.write(str(fpath), arcname)
-
-
 # ---------------------------------------------------------------------------
 # TrInheritancePreprocessor — 行循环继承
 # ---------------------------------------------------------------------------
@@ -211,26 +184,14 @@ class TrInheritancePreprocessor:
     """检测表格中的 {%tr for %} 声明，自动将未被包裹的数据行纳入循环。"""
 
     def process(self, input_path: str, output_path: str) -> int:
-        tmp_dir = tempfile.mkdtemp()
-        try:
-            with zipfile.ZipFile(input_path, "r") as zin:
-                zin.extractall(tmp_dir)
-            doc_xml = Path(tmp_dir) / "word" / "document.xml"
-            tree = etree.parse(str(doc_xml))
-            root = tree.getroot()
-
+        with DocxEditor(input_path) as editor:
+            root = editor.root
             modified_tables = 0
             for tbl in root.iter(f"{{{W}}}tbl"):
                 if self._apply_tr_inheritance(tbl):
                     modified_tables += 1
-
-            if modified_tables > 0:
-                tree.write(str(doc_xml), xml_declaration=True, encoding="UTF-8", standalone=True)
-
-            TcInheritancePreprocessor._repack(tmp_dir, output_path)
+            editor.save_to(output_path, modified=modified_tables > 0)
             return modified_tables
-        finally:
-            shutil.rmtree(tmp_dir, ignore_errors=True)
 
     # ---- tr 核心逻辑 ----
     def _apply_tr_inheritance(self, tbl: etree._Element) -> bool:

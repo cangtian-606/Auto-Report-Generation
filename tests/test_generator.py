@@ -11,6 +11,7 @@ from pathlib import Path
 from docx import Document
 
 from src.render.generator import DocumentGenerator
+from src.render.analyzer import TemplateAnalyzer
 
 
 @pytest.fixture
@@ -38,8 +39,8 @@ class TestDocumentGenerator:
     """测试 DocumentGenerator 类"""
 
     def test_find_unused_data(self, simple_template):
-        """测试 _find_unused_data 功能"""
-        gen = DocumentGenerator(str(simple_template))
+        """测试未使用数据检测功能"""
+        analyzer = TemplateAnalyzer(str(simple_template))
         ctx = {
             "global": {
                 "company_name": "Test",
@@ -52,7 +53,7 @@ class TestDocumentGenerator:
             "unused_section": "value"
         }
 
-        unused = gen._find_unused_data(ctx)
+        unused = analyzer.get_unused(ctx)
 
         # 检查未使用字段是否被识别
         assert "global.unused_field" in unused
@@ -85,8 +86,8 @@ class TestDocumentGenerator:
         assert stat.st_size > 0
 
     def test_check_syntax_no_errors(self, simple_template):
-        """测试 check_syntax 在无错误情况下"""
-        gen = DocumentGenerator(str(simple_template))
+        """测试变量检查在无错误情况下"""
+        analyzer = TemplateAnalyzer(str(simple_template))
         ctx = {
             "global": {
                 "company_name": "Test",
@@ -95,8 +96,9 @@ class TestDocumentGenerator:
             "projects": [{"name": "P1", "year": 2020}]
         }
 
-        result = gen.check_syntax(ctx, report_unused=False)
-        assert result is True
+        undeclared = analyzer.get_undeclared(ctx)
+        assert undeclared is not None
+        assert len(undeclared) == 0
 
     def test_template_cache(self, simple_template):
         """测试模板缓存机制"""
