@@ -7,6 +7,7 @@ import sys
 import argparse
 import logging
 from pathlib import Path
+from datetime import datetime
 from typing import List, Optional
 
 from .orchestrator import generate
@@ -53,7 +54,9 @@ Examples:
                         help="Enable verbose (DEBUG) terminal output")
     parser.add_argument("--quiet", "-q", action="store_true",
                         help="Suppress non-error terminal output (WARNING only)")
-    parser.add_argument("--log-file", help="Write full debug log to file")
+    parser.add_argument("--log-file", help="Custom log file path (default: auto-generate in log/ directory)")
+    parser.add_argument("--no-log", action="store_true",
+                        help="Disable file logging (terminal output only)")
 
     args = parser.parse_args()
 
@@ -64,12 +67,24 @@ Examples:
     if args.quiet:
         terminal_level = logging.WARNING
 
+    project_root = Path(__file__).parent.parent.absolute()
+
+    # 默认自动保存日志到 log/ 目录（除非 --no-log 或指定了 --log-file）
+    if args.log_file:
+        log_file_path = args.log_file
+    elif args.no_log:
+        log_file_path = None
+    else:
+        log_dir = project_root / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_file_path = str(log_dir / f"generate_{timestamp}.log")
+
     configure_logging(
         terminal_level=terminal_level,
-        log_file=args.log_file,
+        log_file=log_file_path,
     )
 
-    project_root = Path(__file__).parent.parent.absolute()
     allowed_data_dirs = [str(project_root / "data"), str(project_root)]
     allowed_template_dirs = [str(project_root / "templates"), str(project_root)]
     allowed_output_dirs = [str(project_root / "output"), str(project_root)]
@@ -141,10 +156,9 @@ Examples:
             sys.exit(1)
 
         if success:
-            logger.info("\n✓ Render complete: %s", args.output)
             sys.exit(0)
         else:
-            logger.error("\n✗ Render failed")
+            logger.error("✗ 报告生成失败")
             sys.exit(1)
 
 

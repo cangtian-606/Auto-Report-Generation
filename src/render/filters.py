@@ -97,4 +97,5 @@ FILTERS = {
     'default_dash': filter_default_dash,
     'default': filter_default,
     'int': filter_int,
+    'number': filter_int,
 }

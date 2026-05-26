@@ -158,9 +158,11 @@ class TcInheritancePreprocessor:
 
             has_template_cells = end_idx - start_idx > 1
             if has_template_cells:
-                saved_text = _XmlHelper._clear_cell(cells[start_idx])
-                _XmlHelper._clear_cell(cells[start_idx + 1])
-                _XmlHelper._set_text(cells[start_idx + 1], saved_text)
+                saved_text_start = _XmlHelper._cell_text(cells[start_idx])
+                if saved_text_start.strip():
+                    saved_text = _XmlHelper._clear_cell(cells[start_idx])
+                    _XmlHelper._clear_cell(cells[start_idx + 1])
+                    _XmlHelper._set_text(cells[start_idx + 1], saved_text)
 
             tag = f"{{%tc for {var_name} in {expr} %}}"
             _XmlHelper._prepend_text(cells[start_idx], tag)

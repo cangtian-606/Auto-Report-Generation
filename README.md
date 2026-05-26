@@ -24,13 +24,13 @@ python -m src -d data.xlsx -t template.docx -o output.docx
 
 ```
 src/
-├── orchestrator.py     # 编排：读取→校验→渲染
+├── orchestrator.py     # 编排：读取→扁平化→校验→预处理→渲染
 ├── cli.py              # CLI 入口
 ├── path_guard.py       # 路径安全校验
 ├── logging_config.py   # 日志配置
 ├── exceptions.py       # 自定义异常
 ├── reader/             # 数据读取（Excel / YAML）
-├── processing/         # 数据映射 + 校验
+├── processing/         # 数据映射 + 表预处理器 + 校验
 └── render/             # 模板渲染 + 过滤器
 ```
 

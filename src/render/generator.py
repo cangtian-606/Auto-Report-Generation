@@ -26,6 +26,16 @@ from ..exceptions import TemplateSyntaxError
 logger = logging.getLogger(__name__)
 
 
+def _extract_error_info(exc: Exception) -> str:
+    """从 Jinja2 异常中提取用户可读的错误信息。"""
+    msg = str(exc)
+    for line in msg.splitlines():
+        line = line.strip()
+        if line and "is undefined" in line:
+            return line.split("is undefined")[0].strip().rstrip("'").lstrip("'")
+    return msg.splitlines()[0].strip() if msg else "未知错误"
+
+
 class DocumentGenerator:
     """docxtpl 文档生成器"""
 
@@ -58,10 +68,12 @@ class DocumentGenerator:
         logger.debug("执行渲染...")
         try:
             doc.render(context, jinja_env=jinja_env)
-        except Exception:
-            logger.exception("[渲染执行] 渲染失败")
+        except Exception as e:
+            error_info = _extract_error_info(e)
+            logger.error("渲染: 失败 — %s", error_info)
+            logger.debug("渲染异常详情", exc_info=True)
             if strict:
-                raise TemplateSyntaxError("渲染失败") from None
+                raise TemplateSyntaxError(f"渲染失败: {error_info}") from e
             return False
 
         output_dir = os.path.dirname(output_path)

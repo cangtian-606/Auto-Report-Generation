@@ -86,20 +86,16 @@ class DataMapper:
         parent_path, child_key = parts
         records = data.to_dict('records')
 
-        parent_target = self._resolve_form_parent(context, parent_path)
-        if parent_target is None:
-            raise DataReadError(
-                f"找不到父表 '{parent_path}'，无法挂载子表 '{full_path}'"
-            )
-
-        if isinstance(parent_target, dict):
-            parent_target[child_key] = records
-            return
-
         parent_col = self._extract_parent_col(data)
         if parent_col is None:
             raise DataReadError(
                 f"子表 '{full_path}' 缺少 _parent_ 开头列，无法关联父表 '{parent_path}'"
+            )
+
+        parent_target = self._resolve_form_parent(context, parent_path)
+        if parent_target is None:
+            raise DataReadError(
+                f"找不到父表 '{parent_path}'，无法挂载子表 '{full_path}'"
             )
 
         self._attach_children_by_column_flat(
@@ -131,8 +127,7 @@ class DataMapper:
                 return col_str[8:]
         return None
 
-    def _resolve_form_parent(self, domain_root: Dict[str, Any], parent_path: str):
-        """解析父表路径，返回 list（表格父表）或 dict（键值对父表）"""
+    def _resolve_form_parent(self, domain_root: Dict[str, Any], parent_path: str) -> List[dict]:
         parts = parent_path.split('.')
         current = domain_root
         for i, part in enumerate(parts):
@@ -141,8 +136,10 @@ class DataMapper:
             elif isinstance(current, list):
                 return self._collect_from_list(current, parts[i:])
             else:
-                return None
-        return current
+                return []
+        if isinstance(current, list):
+            return current
+        return []
 
     def _collect_from_list(self, rows: List[dict], remaining: List[str]) -> List[dict]:
         parents: List[dict] = []
