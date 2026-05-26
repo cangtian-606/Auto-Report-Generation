@@ -91,17 +91,11 @@ def _preprocess_template(template_path: str) -> str:
         ("tc", TcInheritancePreprocessor()),
     ]
     current = template_path
-    tc_count = 0
-    tr_count = 0
     for tag, preprocessor in preprocessors:
         suffix = os.path.splitext(current)[1] or ".docx"
         tmp_fd, tmp_path = tempfile.mkstemp(suffix=suffix, prefix=f"{tag}_pre_")
         os.close(tmp_fd)
         n = preprocessor.process(current, tmp_path)
-        if tag == "tc":
-            tc_count = n
-        else:
-            tr_count = n
         if n > 0:
             if current != template_path:
                 os.unlink(current)

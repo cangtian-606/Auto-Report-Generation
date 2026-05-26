@@ -9,6 +9,7 @@
 """
 
 import re
+import os
 import zipfile
 import tempfile
 import shutil
@@ -196,7 +197,7 @@ class TcInheritancePreprocessor:
         if Path(output_path).exists():
             Path(output_path).unlink()
         with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zout:
-            for dirpath, _, filenames in __import__("os").walk(tmp_dir):
+            for dirpath, _, filenames in os.walk(tmp_dir):
                 for fname in filenames:
                     fpath = Path(dirpath) / fname
                     arcname = str(fpath.relative_to(tmp_dir)).replace("\\", "/")

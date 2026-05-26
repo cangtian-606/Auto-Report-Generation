@@ -10,13 +10,6 @@ def _is_empty(value: Any) -> bool:
     return value is None or value == ''
 
 
-def _is_zero(value: Any) -> bool:
-    try:
-        return float(value) == 0
-    except (ValueError, TypeError):
-        return False
-
-
 def filter_money(value: Any) -> str:
     if _is_empty(value):
         return ''
