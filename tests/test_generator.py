@@ -135,17 +135,17 @@ class TestDocumentGenerator:
         a = table.rows[1]
         a.cells[0].text = "产品A"
         a.cells[1].paragraphs[0].text = "{%tc for month in months %}"
-        a.cells[2].paragraphs[0].text = "{{ data_a[month] | money }}"
+        a.cells[2].paragraphs[0].text = "{{ data_a[month] | num }}"
         a.cells[3].paragraphs[0].text = "{%tc endfor %}"
-        a.cells[4].text = "{{ total_a | money }}"
+        a.cells[4].text = "{{ total_a | num }}"
 
         # Row 2: 数据行 B
         b = table.rows[2]
         b.cells[0].text = "产品B"
         b.cells[1].paragraphs[0].text = "{%tc for month in months %}"
-        b.cells[2].paragraphs[0].text = "{{ data_b[month] | money }}"
+        b.cells[2].paragraphs[0].text = "{{ data_b[month] | num }}"
         b.cells[3].paragraphs[0].text = "{%tc endfor %}"
-        b.cells[4].text = "{{ total_b | money }}"
+        b.cells[4].text = "{{ total_b | num }}"
 
         doc.save(tmpl_path)
 

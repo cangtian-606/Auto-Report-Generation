@@ -5,21 +5,15 @@
 from datetime import datetime as dt
 from typing import Any
 
+_UNITS = {
+    '十': 10, '百': 100, '千': 1000,
+    '万': 10000, '十万': 100000, '百万': 1000000,
+    '千万': 10000000, '亿': 100000000, '十亿': 1000000000,
+}
+
 
 def _is_empty(value: Any) -> bool:
     return value is None or value == ''
-
-
-def filter_money(value: Any) -> str:
-    if _is_empty(value):
-        return ''
-    try:
-        num = float(value)
-        if num == 0:
-            return ''
-        return f"{num:,.2f}"
-    except (ValueError, TypeError):
-        return str(value)
 
 
 def filter_percent(value: Any) -> str:
@@ -34,18 +28,20 @@ def filter_percent(value: Any) -> str:
         return str(value)
 
 
-def filter_num(value: Any) -> str:
+def filter_num(value: Any, decimals: int = 2, unit: str = '') -> str:
     if _is_empty(value):
         return ''
     try:
         num = float(value)
-        if num == 0:
-            return ''
-        if num == int(num):
-            return f"{int(num):,}"
-        return f"{num:,.2f}"
     except (ValueError, TypeError):
         return str(value)
+    if num == 0:
+        return ''
+    divisor = _UNITS.get(unit, 1)
+    num = num / divisor
+    if decimals >= 0:
+        return f"{num:,.{decimals}f}"
+    return f"{int(round(num, decimals)):,}"
 
 
 def filter_date(value: Any, fmt: str = '%Y年%m月%d日') -> str:
@@ -89,13 +85,12 @@ def filter_paragraphs(value: Any) -> str:
 
 
 FILTERS = {
-    'money': filter_money,
+    'money': filter_num,
     'percent': filter_percent,
     'num': filter_num,
     'date': filter_date,
     'default_dash': filter_default_dash,
     'default': filter_default,
     'int': filter_int,
-    'number': filter_int,
     'paragraphs': filter_paragraphs,
 }

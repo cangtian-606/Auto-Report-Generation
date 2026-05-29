@@ -83,7 +83,7 @@ def _setup_template():
 
     table.cell(1, 0).paragraphs[0].add_run("{%tr for i in 项目列表 %}")
     table.cell(2, 0).paragraphs[0].add_run("{{ i.项目 }}")
-    table.cell(2, 1).paragraphs[0].add_run("{{ i.金额 | money }}")
+    table.cell(2, 1).paragraphs[0].add_run("{{ i.金额 | num }}")
     table.cell(2, 2).paragraphs[0].add_run("{{ i.比例 | percent }}")
     table.cell(3, 0).paragraphs[0].add_run("{%tr endfor %}")
 

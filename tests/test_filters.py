@@ -10,7 +10,6 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_DIR))
 
 from src.render.filters import (
-    filter_money,
     filter_percent,
     filter_num,
     filter_date,
@@ -20,21 +19,57 @@ from src.render.filters import (
 )
 
 
-class TestFilterMoney:
+class TestFilterNum:
     def test_none_returns_empty(self):
-        assert filter_money(None) == ''
+        assert filter_num(None) == ''
 
     def test_empty_string_returns_empty(self):
-        assert filter_money('') == ''
+        assert filter_num('') == ''
 
     def test_zero_returns_empty(self):
-        assert filter_money(0) == ''
+        assert filter_num(0) == ''
 
-    def test_positive_number_formats(self):
-        assert filter_money(1234567.89) == '1,234,567.89'
+    def test_default_two_decimals(self):
+        assert filter_num(1234567.89) == '1,234,567.89'
 
-    def test_invalid_returns_original_string(self):
-        assert filter_money('abc') == 'abc'
+    def test_integer_with_default_decimals(self):
+        assert filter_num(1234567) == '1,234,567.00'
+
+    def test_zero_decimals(self):
+        assert filter_num(1234567.89, 0) == '1,234,568'
+
+    def test_four_decimals(self):
+        assert filter_num(12345.6789, 4) == '12,345.6789'
+
+    def test_negative_decimals_rounds(self):
+        assert filter_num(123456, -2) == '123,500'
+
+    def test_negative_decimals_1(self):
+        assert filter_num(123456, -1) == '123,460'
+
+    def test_unit_wan(self):
+        assert filter_num(12345678, 2, '万') == '1,234.57'
+
+    def test_unit_wan_zero_decimals(self):
+        assert filter_num(12345678, 0, '万') == '1,235'
+
+    def test_unit_yi(self):
+        assert filter_num(1234567890, 2, '亿') == '12.35'
+
+    def test_unit_qian(self):
+        assert filter_num(12345678, 2, '千') == '12,345.68'
+
+    def test_unit_wan_negative_decimals(self):
+        assert filter_num(12345678, -2, '万') == '1,200'
+
+    def test_unit_me_wan_negative_3(self):
+        assert filter_num(12345678, -3, '万') == '1,000'
+
+    def test_unknown_unit_treated_as_1(self):
+        assert filter_num(1234567.89, 2, '未知') == '1,234,567.89'
+
+    def test_invalid_value_returns_original(self):
+        assert filter_num('abc') == 'abc'
 
 
 class TestFilterPercent:
@@ -49,20 +84,6 @@ class TestFilterPercent:
 
     def test_whole_number_formats(self):
         assert filter_percent(1) == '100.00%'
-
-
-class TestFilterNum:
-    def test_none_returns_empty(self):
-        assert filter_num(None) == ''
-
-    def test_zero_returns_empty(self):
-        assert filter_num(0) == ''
-
-    def test_integer_formats(self):
-        assert filter_num(1234567) == '1,234,567'
-
-    def test_float_formats(self):
-        assert filter_num(1234567.89) == '1,234,567.89'
 
 
 class TestFilterDate:

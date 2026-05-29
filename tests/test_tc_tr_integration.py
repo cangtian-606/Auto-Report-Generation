@@ -145,7 +145,7 @@ class TestTrForMixedContent:
         make_template(tmpl, [
             ["金额"],
             ["{%tr for i in 列表 %}"],
-            ["{{ i.金额 | money }}"],
+            ["{{ i.金额 | num }}"],
             ["{%tr endfor %}"],
             ["合计"],
         ])
