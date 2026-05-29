@@ -102,6 +102,24 @@ class TestFilterDate:
     def test_custom_format(self):
         assert filter_date('2025-01-15', '%Y/%m/%d') == '2025/01/15'
 
+    def test_preset_short(self):
+        assert filter_date('2025-01-15', 'short') == '2025/01/15'
+
+    def test_preset_month(self):
+        assert filter_date('2025-01-15', 'month') == '2025年01月'
+
+    def test_preset_chinese(self):
+        assert filter_date('2025-01-15', 'chinese') == '二〇二五年一月十五日'
+
+    def test_preset_chinese_leap_day(self):
+        assert filter_date('2024-02-29', 'chinese') == '二〇二四年二月二十九日'
+
+    def test_preset_chinese_single_digit(self):
+        assert filter_date('2025-03-05', 'chinese') == '二〇二五年三月五日'
+
+    def test_preset_chinese_datetime(self):
+        assert filter_date(datetime(2025, 10, 20), 'chinese') == '二〇二五年十月二十日'
+
     def test_datetime_object(self):
         assert filter_date(datetime(2025, 1, 15)) == '2025年01月15日'
 
