@@ -82,6 +82,12 @@ def filter_int(value: Any) -> str:
         return str(value)
 
 
+def filter_paragraphs(value: Any) -> str:
+    if _is_empty(value):
+        return ''
+    return str(value).replace('\n', '\a')
+
+
 FILTERS = {
     'money': filter_money,
     'percent': filter_percent,
@@ -91,4 +97,5 @@ FILTERS = {
     'default': filter_default,
     'int': filter_int,
     'number': filter_int,
+    'paragraphs': filter_paragraphs,
 }
