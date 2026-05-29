@@ -182,7 +182,7 @@ class DataMapper:
             pval = str(rec.get(f'_parent_{parent_col}', ''))
             for row in parent_rows:
                 if str(row.get(parent_col, '')) == pval:
-                    clean = {k: v for k, v in rec.items() if not k.startswith('_parent_')}
+                    clean = {k: self._convert_value(v) for k, v in rec.items() if not k.startswith('_parent_')}
                     row[child_key].append(clean)
                     break
 
@@ -219,6 +219,8 @@ class DataMapper:
 
     def _convert_value(self, value: Any) -> Any:
         if value is None:
+            return ''
+        if isinstance(value, float) and pd.isna(value):
             return ''
         if isinstance(value, str):
             upper = value.strip().upper()
