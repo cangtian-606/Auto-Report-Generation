@@ -55,7 +55,7 @@ class DataMapper:
             else:
                 self._mount_or_build_date_df(context, sheet_name, data)
         else:
-            context[sheet_name] = data.to_dict('records')
+            context[sheet_name] = self._convert_records(data.to_dict('records'))
 
     def _mount_or_build_date_dict(self, context, full_path, data: dict):
         parts = full_path.rsplit('.', 1)
@@ -83,11 +83,11 @@ class DataMapper:
         parts = full_path.rsplit('.', 1)
 
         if len(parts) == 1:
-            context[parts[0]] = data.to_dict('records')
+            context[parts[0]] = self._convert_records(data.to_dict('records'))
             return
 
         parent_path, child_key = parts
-        records = data.to_dict('records')
+        records = self._convert_records(data.to_dict('records'))
 
         parent_col = self._extract_parent_col(data)
         if parent_col is None:
@@ -109,11 +109,11 @@ class DataMapper:
         parts = full_path.rsplit('.', 1)
 
         if len(parts) == 1:
-            context[parts[0]] = data.to_dict('records')
+            context[parts[0]] = self._convert_records(data.to_dict('records'))
             return
 
         parent_path, child_key = parts
-        records = data.to_dict('records')
+        records = self._convert_records(data.to_dict('records'))
         parent = self._get_nested(context, parent_path)
 
         if isinstance(parent, dict):
@@ -217,11 +217,17 @@ class DataMapper:
                 return None
         return current
 
+    def _convert_records(self, records: List[dict]) -> List[dict]:
+        return [{k: self._convert_value(v) for k, v in rec.items()} for rec in records]
+
     def _convert_value(self, value: Any) -> Any:
         if value is None:
             return ''
-        if isinstance(value, float) and pd.isna(value):
-            return ''
+        try:
+            if pd.isna(value):
+                return ''
+        except (TypeError, ValueError):
+            pass
         if isinstance(value, str):
             upper = value.strip().upper()
             if upper == 'TRUE':

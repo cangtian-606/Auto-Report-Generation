@@ -60,6 +60,5 @@ class ExcelDataReader:
     def _parse_table(self, sheet_name: str, df: pd.DataFrame) -> pd.DataFrame:
         df.columns = [str(col).strip() for col in df.iloc[0]]
         df = df.iloc[1:].reset_index(drop=True)
-        df = df.where(pd.notna(df), None)
         logger.debug("  [%s] 表格: %d 行 x %d 列", sheet_name, len(df), len(df.columns))
         return df
