@@ -2,11 +2,14 @@
 # -*- coding: utf-8 -*-
 """数据映射器"""
 
+import logging
 from typing import Any, Dict, List
 
 import pandas as pd
 
 from ..exceptions import DataReadError
+
+logger = logging.getLogger(__name__)
 
 
 class DataMapper:
@@ -185,10 +188,13 @@ class DataMapper:
 
         unmatched = [r for r in parent_rows if not r.get(child_key)]
         if unmatched:
-            raise DataReadError(
-                f"父表有 {len(unmatched)} 行在子表 '{table_name}' 中无匹配数据: "
-                f"{[r.get(parent_col, '?') for r in unmatched]}"
+            logger.warning(
+                "父表有 %d 行在子表 '%s' 中无匹配数据，已初始化为空列表: %s",
+                len(unmatched), table_name,
+                [r.get(parent_col, '?') for r in unmatched]
             )
+            for row in unmatched:
+                row[child_key] = []
 
     def _set_nested(self, d: Dict[str, Any], path: str, value: Any) -> None:
         parts = path.split('.')

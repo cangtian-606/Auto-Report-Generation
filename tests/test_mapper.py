@@ -182,7 +182,7 @@ class TestNestingFormToForm:
         with pytest.raises(DataReadError):
             mapper.build_context()
 
-    def test_parent_row_without_child_raises_error(self):
+    def test_parent_row_without_child_warns_and_uses_empty(self):
         parent_df = pd.DataFrame({"公司简称": ["重庆晟和泰", "安徽富军"]})
         child_df = pd.DataFrame({
             "_parent_公司简称": ["重庆晟和泰"],
@@ -193,8 +193,12 @@ class TestNestingFormToForm:
             "项目公司.股东出资": child_df,
         }
         mapper = DataMapper(raw_data)
-        with pytest.raises(DataReadError):
-            mapper.build_context()
+        context = mapper.build_context()
+        rows = context["项目公司"]
+        assert len(rows) == 2
+        assert rows[0]["股东出资"] == [{"股东": "张伟"}]
+        assert rows[1]["股东出资"] == []
+        assert rows[1]["公司简称"] == "安徽富军"
 
     def test_multi_level_nesting_form(self):
         parent_df = pd.DataFrame({"公司简称": ["重庆晟和泰"]})
