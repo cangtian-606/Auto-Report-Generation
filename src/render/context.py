@@ -31,30 +31,58 @@ def _flatten_nested_lists(context: Dict[str, Any]) -> None:
                 if flat_list:
                     context[flat_key] = flat_list
 
-    _fix_dotted_resolution(context)
+    _unshadow_dotted_keys(context)
 
 
-def _fix_dotted_resolution(context: Dict[str, Any]) -> None:
-    """为被 non-dict 父键阻挡的点号键创建 Jinja2 别名。
+def _unshadow_dotted_keys(context: Dict[str, Any]) -> None:
+    """将纯容器 list 替换为 dict，使点号键可被 Jinja2 解析。
 
     当 context 同时存在 "项目建设情况" (list) 和 "项目建设情况.固定资产" (list) 时，
     Jinja2 的 {{ 项目建设情况.固定资产 }} 会先解析 "项目建设情况" → list，
     再尝试 list["固定资产"] → 失败，永远不会触达扁平键。
 
-    修复：将点替换为双下划线作为别名，模板用 {{ X__Y }} 访问。
+    解决：若父 list 是"纯容器"（仅含 ≤2 个非 list 列，如项目名称），
+    且其所有子 list 已扁平化为点号键，则将父 list 替换为 dict，
+    把扁平键的值直接作为 dict 的 value。
+    对于产销情况等有大量业务列的表，保留不动，不破坏 {% for %} 直接引用。
     """
-    for flat_key, value in list(context.items()):
-        if '.' not in flat_key:
+    # gather all dotted-children metadata
+    dotted_parents: Dict[str, set] = {}
+    for key, value in context.items():
+        if '.' not in key:
             continue
-        first_part = flat_key.split('.')[0]
-        if first_part not in context:
+        parent = key.split('.')[0]
+        if parent not in context:
             continue
-        parent = context[first_part]
-        if isinstance(parent, dict):
+        if not isinstance(context[parent], list) or not context[parent]:
             continue
-        alias = flat_key.replace('.', '__')
-        if alias not in context:
-            context[alias] = value
+        dotted_parents.setdefault(parent, set()).add(key)
+
+    for parent, children in dotted_parents.items():
+        parent_list = context[parent]
+        sample = parent_list[0]
+        if not isinstance(sample, dict):
+            continue
+
+        # count non-list primitive columns in sample
+        non_list_cols = [k for k, v in sample.items() if not isinstance(v, list)]
+        if len(non_list_cols) > 2:
+            continue  # rich table — probably referenced directly, keep it
+
+        # verify all list-valued children are in flat_keys
+        list_children = [(ck, cv) for ck, cv in sample.items() if isinstance(cv, list)]
+        if not list_children:
+            continue
+        all_flattened = all(f"{parent}.{ck}" in context for ck, _ in list_children)
+        if not all_flattened:
+            continue
+
+        proxy: Dict[str, Any] = {}
+        for ck, _ in list_children:
+            flat_key = f"{parent}.{ck}"
+            if flat_key in context:
+                proxy[ck] = context[flat_key]
+        context[parent] = proxy
 
 
 class RenderContext:
