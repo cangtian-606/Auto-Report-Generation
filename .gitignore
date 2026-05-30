@@ -10,6 +10,7 @@ build/
 # Data (only demo tracking)
 data/*
 !data/demo_data.xlsx
+!data/demo_data.yaml
 
 # Templates (only demo tracking)
 templates/*
