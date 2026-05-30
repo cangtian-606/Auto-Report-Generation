@@ -31,6 +31,31 @@ def _flatten_nested_lists(context: Dict[str, Any]) -> None:
                 if flat_list:
                     context[flat_key] = flat_list
 
+    _fix_dotted_resolution(context)
+
+
+def _fix_dotted_resolution(context: Dict[str, Any]) -> None:
+    """为被 non-dict 父键阻挡的点号键创建 Jinja2 别名。
+
+    当 context 同时存在 "项目建设情况" (list) 和 "项目建设情况.固定资产" (list) 时，
+    Jinja2 的 {{ 项目建设情况.固定资产 }} 会先解析 "项目建设情况" → list，
+    再尝试 list["固定资产"] → 失败，永远不会触达扁平键。
+
+    修复：将点替换为双下划线作为别名，模板用 {{ X__Y }} 访问。
+    """
+    for flat_key, value in list(context.items()):
+        if '.' not in flat_key:
+            continue
+        first_part = flat_key.split('.')[0]
+        if first_part not in context:
+            continue
+        parent = context[first_part]
+        if isinstance(parent, dict):
+            continue
+        alias = flat_key.replace('.', '__')
+        if alias not in context:
+            context[alias] = value
+
 
 class RenderContext:
     """渲染上下文 — 从 raw_data 构建完整的 Jinja2 渲染上下文。
