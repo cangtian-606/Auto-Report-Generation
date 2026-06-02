@@ -126,7 +126,7 @@ src/
     ├── pipeline.py          # RenderPipeline：阶段编排 + 临时文件管理
     ├── context.py           # RenderContext：构建 + 扁平化 + 校验
     └── analyzer.py          # TemplateAnalyzer：模板自省（stats + 变量检查）
-tests/                       # 107 个测试（pytest）
+tests/                       # 125 个测试（pytest）
 ```
 
 ## Key design decisions
