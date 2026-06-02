@@ -51,11 +51,12 @@ class DocxEditor:
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         if self._tmp_dir:
             shutil.rmtree(self._tmp_dir, ignore_errors=True)
+            self._tmp_dir = None
         return None
 
     def save_to(self, output_path: str, modified: bool = False) -> None:
         """将 XML 写回（如果有改动）并重新打包为 output_path。"""
-        assert self._tmp_dir is not None, "save_to 只能在 with 块内或退出后调用"
+        assert self._tmp_dir is not None, "save_to 只能在 with 块内调用"
 
         if modified and self._tree is not None:
             doc_xml = Path(self._tmp_dir) / "word" / "document.xml"

@@ -100,6 +100,60 @@ class TestDocumentGenerator:
         assert undeclared is not None
         assert len(undeclared) == 0
 
+    def test_for_loop_iterated_list_fields_not_reported(self, temp_dir):
+        """模板中 {% for %} 块迭代的列表，其内部字段不应被误报为未用。
+
+        验证 get_unused 不会生成 projects[0].name 这样的路径。
+        """
+        from docx import Document
+        tmpl_path = temp_dir / "for_template.docx"
+        doc = Document()
+        doc.add_paragraph(
+            "{% for item in projects %}{{ item.name }} - {{ item.year }}{% endfor %}"
+        )
+        doc.save(tmpl_path)
+
+        analyzer = TemplateAnalyzer(str(tmpl_path))
+        ctx = {
+            "projects": [
+                {"name": "Proj1", "year": 2020, "secret": "x"},
+                {"name": "Proj2", "year": 2021, "secret": "y"},
+            ]
+        }
+
+        unused = analyzer.get_unused(ctx)
+
+        # 整个 projects 列表被 for 块引用，不应被报告
+        assert "projects" not in unused
+        # 列表内任何字段都不应被下钻报告（不下钻 list 内部）
+        assert not any(p.startswith("projects[") for p in unused), (
+            f"不应下钻 list 内部: {unused}"
+        )
+
+    def test_completely_unused_list_is_reported(self, temp_dir):
+        """完全未被引用的 list 整体应被报告为未用。"""
+        from docx import Document
+        tmpl_path = temp_dir / "unused_list_template.docx"
+        doc = Document()
+        doc.add_paragraph("公司: {{ company.name }}")
+        doc.save(tmpl_path)
+
+        analyzer = TemplateAnalyzer(str(tmpl_path))
+        ctx = {
+            "company": {"name": "Acme"},
+            "orphan_projects": [{"name": "P1"}, {"name": "P2"}],
+        }
+
+        unused = analyzer.get_unused(ctx)
+
+        assert "orphan_projects" in unused
+        # company.name 仍正常识别为已用
+        assert "company.name" not in unused
+        # orphan_projects 内字段不应被下钻
+        assert not any(p.startswith("orphan_projects[") for p in unused), (
+            f"不应下钻 list 内部: {unused}"
+        )
+
     def test_template_cache(self, simple_template):
         """测试模板缓存机制"""
         gen1 = DocumentGenerator(str(simple_template))
@@ -113,6 +167,53 @@ class TestDocumentGenerator:
         gen2 = DocumentGenerator(str(simple_template))
         doc3 = gen2._load_template()
         assert doc3 is doc1
+
+    def test_template_cache_invalidates_on_mtime_change(self, temp_dir):
+        """模板文件 mtime 变化时缓存应自动失效（重新加载）"""
+        from docx import Document
+        tmpl_path = temp_dir / "mtime_template.docx"
+        Document().save(tmpl_path)
+
+        gen = DocumentGenerator(str(tmpl_path))
+        doc1 = gen._load_template()
+
+        # 修改 mtime：后退 10 秒，确保 mtime_ns 必变
+        import os
+        old_mtime = os.stat(tmpl_path).st_mtime
+        os.utime(tmpl_path, (old_mtime - 10, old_mtime - 10))
+
+        doc2 = gen._load_template()
+
+        # mtime 变化后，缓存应返回新实例
+        assert doc1 is not doc2, "mtime 变化后缓存应失效"
+
+    def test_load_template_log_uses_source_path(self, temp_dir, caplog):
+        """DEBUG 日志应显示原始模板路径（source_template_path），而非预处理后临时路径。
+
+        场景：DocumentGenerator 接收的是预处理后临时文件，但日志需显示用户原始路径。
+        """
+        import logging
+        from docx import Document
+
+        source_path = temp_dir / "user_template.docx"
+        preprocessed_path = temp_dir / "tc_pre_abc.docx"
+        Document().save(source_path)
+        Document().save(preprocessed_path)
+
+        # 创建 generator 时传入预处理路径，但显式指定原始路径
+        gen = DocumentGenerator(
+            template_path=str(preprocessed_path),
+            source_template_path=str(source_path),
+        )
+
+        with caplog.at_level(logging.DEBUG, logger="src.render.generator"):
+            gen._load_template()
+
+        # 日志中应该出现原始路径
+        log_text = caplog.text
+        assert str(source_path) in log_text, (
+            f"日志应显示原始路径 {source_path}，实际: {log_text}"
+        )
 
     def test_tc_column_loop(self, temp_dir):
         """测试 {%tc for %} 列循环渲染 — 表头 + 多行数据"""
@@ -174,3 +275,31 @@ class TestDocumentGenerator:
         assert row_a[0] == "产品A"
         assert row_a[1] == "100.00"
         assert row_a[4] == "450.00"
+
+    def test_docx_editor_exit_sets_tmp_dir_none(self, temp_dir):
+        """DocxEditor __exit__ 后应将 _tmp_dir 设为 None，且不能在块外调用 save_to。"""
+        from docx import Document
+        from src.processing.docx_editor import DocxEditor
+
+        tmpl_path = temp_dir / "test_editor.docx"
+        out1_path = temp_dir / "out1.docx"
+        out2_path = temp_dir / "out2.docx"
+        doc = Document()
+        doc.add_paragraph("test")
+        doc.save(tmpl_path)
+
+        # 在 with 块内正常工作
+        editor = DocxEditor(str(tmpl_path))
+        with editor:
+            # 检查内部状态
+            assert editor._tmp_dir is not None
+            editor.save_to(str(out1_path), modified=True)
+
+        # 检查 with 块退出后的状态
+        assert editor._tmp_dir is None
+        # 尝试在块外调用 save_to 应该抛 AssertionError
+        try:
+            editor.save_to(str(out2_path), modified=False)
+            assert False, "应在退出后抛 AssertionError"
+        except AssertionError as e:
+            assert "只能在 with 块内" in str(e)

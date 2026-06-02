@@ -162,7 +162,10 @@ def generate(data_path: str, template_path: str, output_path: str,
         if check_syntax:
             _check_syntax(analyzer, context, strict, report_unused)
 
-        gen = DocumentGenerator(render_template_path)
+        gen = DocumentGenerator(
+            render_template_path,
+            source_template_path=template_path,
+        )
         success = gen.render(context, output_path, strict=strict)
         return {"success": success, "undeclared_count": undeclared_count}
 

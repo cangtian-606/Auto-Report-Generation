@@ -86,49 +86,69 @@ class TemplateAnalyzer:
             return None
 
     def get_unused(self, context: Dict[str, Any]) -> List[str]:
+        """报告 context 中未被模板引用的字段。
+
+        重要约束：不下钻 list 内部。list 是否被使用以"列表整体路径"为单位判断，
+        因为 list 元素是否被 {% for %} 块使用属于 Jinja2 循环变量作用域问题，
+        纯路径匹配无法可靠判断（会引入大量误报）。
+        """
         unused: List[str] = []
         template_vars = self._collect_template_vars()
 
-        def traverse(value: Any, path_prefix: str = ""):
+        def walk(value: Any, path: str) -> None:
             if isinstance(value, dict):
                 for key, val in value.items():
-                    current_path = f"{path_prefix}.{key}" if path_prefix else key
-                    if current_path not in template_vars:
-                        if not isinstance(val, (dict, list)):
-                            unused.append(current_path)
-                    traverse(val, current_path)
+                    sub_path = f"{path}.{key}" if path else key
+                    if isinstance(val, (dict, list)):
+                        if sub_path not in template_vars:
+                            unused.append(sub_path)
+                        walk(val, sub_path)
+                    else:
+                        if sub_path not in template_vars:
+                            unused.append(sub_path)
             elif isinstance(value, list):
-                for idx, item in enumerate(value):
-                    if isinstance(item, (dict, list)):
-                        list_path = f"{path_prefix}[{idx}]" if path_prefix else f"[{idx}]"
-                        traverse(item, list_path)
+                # list 不下钻：整列表已用则忽略，否则整列表报为未用
+                if path not in template_vars:
+                    unused.append(path)
 
         for key, value in context.items():
-            current_path = key
             if isinstance(value, (dict, list)):
-                traverse(value, current_path)
+                if key not in template_vars:
+                    unused.append(key)
+                walk(value, key)
             else:
-                if current_path not in template_vars:
-                    unused.append(current_path)
+                if key not in template_vars:
+                    unused.append(key)
         return unused
 
     def _collect_template_vars(self) -> Set[str]:
+        """收集模板中所有"被引用"的变量路径。
+
+        收集两类：
+        1. `{{ x.y }}` 表达式中的 x.y — 取首段路径用于"是否被引用"判断
+        2. `{% for x in path %}` 中的 path — 标识被迭代的列表
+
+        注意：正则只取"路径前缀"（不取完整表达式如 `x | filter`），
+        以便与 context 中的纯路径对齐匹配。
+        """
         self._ensure_loaded()
-        var_pattern = re.compile(r"\{\{\s*(.+?)\s*(?:\||\}\})")
+        var_pattern = re.compile(r"\{\{\s*([^\s|{}][^{}]*?)\s*(?:\||\}\})")
+        for_pattern = re.compile(r"\{%\s*for\s+\w+\s+in\s+([^\s%]+)\s*%\}")
         template_vars: Set[str] = set()
         try:
             real_doc = self._doc.get_docx()
             for elem in real_doc.part._element.iter():
-                if elem.text:
-                    for match in var_pattern.finditer(elem.text):
+                for text in (elem.text, elem.tail):
+                    if not text:
+                        continue
+                    for match in var_pattern.finditer(text):
                         var_path = match.group(1).strip()
                         if var_path:
                             template_vars.add(var_path)
-                if elem.tail:
-                    for match in var_pattern.finditer(elem.tail):
-                        var_path = match.group(1).strip()
-                        if var_path:
-                            template_vars.add(var_path)
+                    for match in for_pattern.finditer(text):
+                        list_path = match.group(1).strip()
+                        if list_path:
+                            template_vars.add(list_path)
         except Exception:
             logger.exception("收集模板变量失败")
         return template_vars

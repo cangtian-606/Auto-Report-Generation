@@ -33,10 +33,22 @@ def _extract_error_info(exc: Exception) -> str:
 class DocumentGenerator:
     """docxtpl 文档生成器"""
 
-    _template_cache: Dict[str, DocxTemplate] = {}
+    _template_cache: Dict[Any, DocxTemplate] = {}
 
-    def __init__(self, template_path: str) -> None:
+    def __init__(
+        self,
+        template_path: str,
+        source_template_path: Optional[str] = None,
+    ) -> None:
+        """文档生成器构造函数。
+
+        Args:
+            template_path: 实际要加载渲染的模板文件路径。预处理流程下指向临时文件。
+            source_template_path: 用户提供的原始模板路径，仅用于日志/错误提示。
+                若为 None，则回退到 template_path。
+        """
         self.template_path = template_path
+        self.source_template_path = source_template_path or template_path
         self._analyzer: Optional[TemplateAnalyzer] = None
 
     @property
@@ -46,13 +58,22 @@ class DocumentGenerator:
         return self._analyzer
 
     def _load_template(self) -> DocxTemplate:
-        if self.template_path not in self._template_cache:
-            logger.debug("加载模板: %s", self.template_path)
+        import os
+        cache_key: Any
+        try:
+            mtime_ns = os.stat(self.template_path).st_mtime_ns
+            cache_key = (self.template_path, mtime_ns)
+        except Exception:
+            # 若无法获取 mtime（例如临时路径删除），回退到纯路径
+            cache_key = self.template_path
+        if cache_key not in self._template_cache:
+            # 日志显示用户原始路径，缓存键基于实际加载路径
+            logger.debug("加载模板: %s", self.source_template_path)
             try:
-                self._template_cache[self.template_path] = DocxTemplate(self.template_path)
+                self._template_cache[cache_key] = DocxTemplate(self.template_path)
             except Exception:
                 raise
-        return self._template_cache[self.template_path]
+        return self._template_cache[cache_key]
 
     def render(self, context: Dict[str, Any], output_path: str,
                strict: bool = False) -> bool:
